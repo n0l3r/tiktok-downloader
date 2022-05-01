@@ -12,6 +12,7 @@
   "dependencies": {
     "chalk": "^2.4.2",
     "cheerio": "^1.0.0-rc.10",
+    "inquirer": "^8.2.4",
     "node-fetch": "^2.6.7",
     "readline-sync": "^1.4.10"
   }
