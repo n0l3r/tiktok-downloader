@@ -4,6 +4,8 @@ const inquirer = require("inquirer");
 const cheerio = require("cheerio");
 const fs = require("fs");
 const { exit } = require("process");
+const { resolve } = require("path");
+const { reject } = require("lodash");
 
 const getChoice = () => new Promise((resolve, reject) => {
     inquirer.prompt([
@@ -12,6 +14,12 @@ const getChoice = () => new Promise((resolve, reject) => {
             name: "choice",
             message: "Choose a option",
             choices: ["Mass Download (Username)", "Single Download (URL)", "Exit"]
+        },
+        {
+            type: "list",
+            name: "type",
+            message: "Choose a option",
+            choices: ["With Watermark", "Without Watermark"]
         }
     ])
     .then(res => resolve(res))
@@ -30,37 +38,66 @@ const getInput = (message) => new Promise((resolve, reject) => {
     .catch(err => reject(err));
 });
 
-const downloadMediaFromUrl = (urls) => new Promise((resolve, reject) => {
-    console.log(chalk.blue("[*] Processing..."));
-    urls.forEach((url) => {
-        const API_URL = `https://api.tiktokv.com/aweme/v1/multi/aweme/detail/?aweme_ids=%5B${url}%5b`;
-        const urlDownload = fetch(API_URL, {
-            method: "GET",
-        });
-        urlDownload.then(res => res.json())
-        .then(res => {
-            const url = res.aweme_details[0].video.play_addr.url_list[0];
-            const idVideo = res.aweme_details[0].aweme_id;
-            const folder = `downloads/`;
-            const fileName = `${idVideo}.mp4`;
-            const file = fs.createWriteStream(folder+fileName);
-            const downloadFile = fetch(url);
-            downloadFile.then(res => {
-                res.body.pipe(file);
-                file.on("finish", () => {
-                    file.close();
-                    resolve();
-                })
-                file.on("error", (err) => reject(err));
-            }
-            )
-            .catch(err => reject(err));
+const generateUrlProfile = (username) => {
+    var baseUrl = "https://www.tiktok.com/";
+    if (username.includes("@")) {
+        baseUrl = `${baseUrl}${username}`;
+    } else {
+        baseUrl = `${baseUrl}@${username}`;
+    }
+    return baseUrl;
+};
+
+const downloadMediaFromList = async (list) => {
+    const folder = "downloads/"
+    list.forEach((item) => {
+        const fileName = `${item.id}.mp4`
+        const downloadFile = fetch(item.url)
+        const file = fs.createWriteStream(folder + fileName)
+        
+        console.log(chalk.green(`[+] Downloading ${fileName}`))
+
+        downloadFile.then(res => {
+            res.body.pipe(file)
+            file.on("finish", () => {
+                file.close()
+                resolve()
+            });
+            file.on("error", (err) => reject(err));
         });
     });
-    
-});
+}
 
-const getListVideo = async (username) => {
+const getVideoWM = async (idVideo) => {
+    const API_URL = `https://api.tiktokv.com/aweme/v1/multi/aweme/detail/?aweme_ids=%5B${idVideo}%5b`;
+    const request = await fetch(API_URL, {
+        method: "GET"
+    });
+    const res = await request.json()
+    const urlMedia = res.aweme_details[0].video.download_addr.url_list[0]
+    const data = {
+        url: urlMedia,
+        id: idVideo
+    }
+    return data
+}
+
+const getVideoNoWM = async (idVideo) => {
+    const API_URL = `https://api.tiktokv.com/aweme/v1/multi/aweme/detail/?aweme_ids=%5B${idVideo}%5b`;
+    const request = await fetch(API_URL, {
+        method: "GET"
+    });
+    const res = await request.json()
+    const urlMedia = res.aweme_details[0].video.play_addr.url_list[0]
+    const data = {
+        url: urlMedia,
+        id: idVideo
+    }
+    return data
+}
+
+
+const getListVideoByUsername = async (username) => {
     var baseUrl = "https://www.tiktok.com/";
     if (username.includes("@")) {
         baseUrl = `${baseUrl}${username}`;
@@ -87,7 +124,8 @@ const getListVideo = async (username) => {
             listVideo.push(getIdVideo(url));
         }        
     });
-    return listVideo;
+    
+    return listVideo
 }
 
 const getIdVideo = (url) => {
@@ -100,8 +138,7 @@ const getIdVideo = (url) => {
     return (idVideo.length > 19) ? idVideo.substring(0, idVideo.indexOf("?")) : idVideo;
 }
 
-
-(async () => {
+(async () => {    
     const choice = await getChoice();
     if(choice.choice === "Exit"){
         console.log(chalk.red("[*] Exiting..."));
@@ -109,10 +146,11 @@ const getIdVideo = (url) => {
     }
 
     var listVideo;
+    var listMedia = [];
     if (choice.choice === "Mass Download (Username)") {
         const usernameInput = await getInput("Enter the username with @ (e.g. @username) : ");
         const username = usernameInput.input;
-        listVideo = await getListVideo(username);
+        listVideo = await getListVideoByUsername(username);
 
         if(listVideo.length === 0) {
             console.log(chalk.yellow("[!] Error: No video found"));
@@ -134,14 +172,21 @@ const getIdVideo = (url) => {
         listVideo = [idVideo];
     }
 
-    console.log(listVideo)
-
     console.log(chalk.green(`[!] Found ${listVideo.length} video`));
-    await downloadMediaFromUrl(listVideo)
-    .then(() => {
-        console.log(chalk.green("[+] Downloaded successfully"));
-    })
-    .catch(err => {
-        console.log(chalk.red("[X] Error: " + err));
-    });    
+
+
+    for(var i = 0; i < listVideo.length; i++){
+        var data = (choice.type == "With Watermark") ? await getVideoWM(listVideo[i]) : await getVideoNoWM(listVideo[i]);
+        listMedia.push(data);
+    }
+
+    downloadMediaFromList(listMedia)
+        .then(() => {
+            console.log(chalk.green("[+] Downloaded successfully"));
+        })
+        .catch(err => {
+            console.log(chalk.red("[X] Error: " + err));
+    });
+    
+
 })();
