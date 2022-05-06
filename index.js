@@ -18,7 +18,7 @@ const getChoice = () => new Promise((resolve, reject) => {
             type: "list",
             name: "choice",
             message: "Choose a option",
-            choices: ["Mass Download (Username)", "Single Download (URL)", "Exit"]
+            choices: ["Mass Download (Username)", "Single Download (URL)"]
         },
         {
             type: "list",
@@ -27,10 +27,7 @@ const getChoice = () => new Promise((resolve, reject) => {
             choices: ["With Watermark", "Without Watermark"]
         }
     ])
-    .then(res => {
-        if(res.choice == "Exit") exit()
-        resolve(res)
-    })
+    .then(res => resolve(res))
     .catch(err => reject(err));
 });
 
