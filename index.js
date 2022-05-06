@@ -8,6 +8,7 @@ const chalk = require("chalk");
 const inquirer = require("inquirer");
 const cheerio = require("cheerio");
 const fs = require("fs");
+const puppeteer = require("puppeteer");
 const { exit } = require("process");
 const { resolve } = require("path");
 const { reject } = require("lodash");
@@ -73,7 +74,8 @@ const downloadMediaFromList = async (list) => {
     });
 }
 
-const getVideoWM = async (idVideo) => {
+const getVideoWM = async (url) => {
+    const idVideo = await getIdVideo(url)
     const API_URL = `https://api.tiktokv.com/aweme/v1/multi/aweme/detail/?aweme_ids=%5B${idVideo}%5b`;
     const request = await fetch(API_URL, {
         method: "GET"
@@ -87,7 +89,8 @@ const getVideoWM = async (idVideo) => {
     return data
 }
 
-const getVideoNoWM = async (idVideo) => {
+const getVideoNoWM = async (url) => {
+    const idVideo = await getIdVideo(url)
     const API_URL = `https://api.tiktokv.com/aweme/v1/multi/aweme/detail/?aweme_ids=%5B${idVideo}%5b`;
     const request = await fetch(API_URL, {
         method: "GET"
@@ -104,27 +107,31 @@ const getVideoNoWM = async (idVideo) => {
 
 const getListVideoByUsername = async (username) => {
     var baseUrl = await generateUrlProfile(username)
-    const res = await fetch(baseUrl, {
-        headers: {
-        "User-Agent":
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.61 Safari/537.36",
-        },
-    });
-    const body = await res.text();
-    const status = await res.status;
-    if(status !== 200) {
-        console.log(chalk.red("[X] Error: Username not found"));
-        exit();
+    const browser = await puppeteer.launch({
+        headless: true,
+    })
+    const page = await browser.newPage()
+    await page.goto(baseUrl)
+    var listVideo = []
+    console.log(chalk.green("[*] Getting list video from: " + username))
+    var loop = true
+    while(loop) {
+        listVideo = await page.evaluate(() => {
+            const listVideo = Array.from(document.querySelectorAll(".tiktok-yz6ijl-DivWrapper > a"));
+            return listVideo.map(item => item.href);
+        });
+        console.log(chalk.green(`[*] ${listVideo.length} video found`))
+        previousHeight = await page.evaluate("document.body.scrollHeight");
+        await page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+        await page.waitForFunction(`document.body.scrollHeight > ${previousHeight}`, {timeout: 10000})
+        .catch(() => {
+            console.log(chalk.red("[X] No more video found"));
+            console.log(chalk.green(`[*] Total video found: ${listVideo.length}`))
+            loop = false
+        });
+        await new Promise((resolve) => setTimeout(resolve, 1000));
     }
-    const $ = cheerio.load(body);
-    var listVideo = [];
-    $("a").each((i, el) => {
-        const url = $(el).attr("href");
-        if (url.includes("/video/")) {
-            listVideo.push(getIdVideo(url));
-        }        
-    });
-    
+    await browser.close()
     return listVideo
 }
 const getRedirectUrl = async (url) => {
@@ -159,7 +166,6 @@ const getIdVideo = (url) => {
         const usernameInput = await getInput("Enter the username with @ (e.g. @username) : ");
         const username = usernameInput.input;
         listVideo = await getListVideoByUsername(username);
-
         if(listVideo.length === 0) {
             console.log(chalk.yellow("[!] Error: No video found"));
             exit();
@@ -180,8 +186,7 @@ const getIdVideo = (url) => {
     } else {
         const urlInput = await getInput("Enter the URL : ");
         const url = await getRedirectUrl(urlInput.input);
-        const idVideo = await getIdVideo(url);
-        listVideo.push(idVideo);
+        listVideo.push(url);
     }
 
     console.log(chalk.green(`[!] Found ${listVideo.length} video`));

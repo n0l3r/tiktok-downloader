@@ -53,8 +53,8 @@
     "os-tmpdir": "^1.0.2",
     "parse5": "^6.0.1",
     "parse5-htmlparser2-tree-adapter": "^6.0.1",
+    "puppeteer": "^13.7.0",
     "readable-stream": "^3.6.0",
-    "readline-sync": "^1.4.10",
     "restore-cursor": "^3.1.0",
     "run-async": "^2.4.1",
     "rxjs": "^7.5.5",
@@ -77,6 +77,7 @@
     "wrap-ansi": "^7.0.0"
   },
   "scripts": {
+    "update-contrib": "weallcontribute -o . && git add CONTRIBUTING.md && git commit -m 'docs(contributing): updated CONTRIBUTING.md'",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -94,5 +95,8 @@
   "bugs": {
     "url": "https://github.com/n0l3r/tiktok-downloader/issues"
   },
-  "homepage": "https://github.com/n0l3r/tiktok-downloader#readme"
+  "homepage": "https://github.com/n0l3r/tiktok-downloader#readme",
+  "devDependencies": {
+    "weallcontribute": "^1.0.9"
+  }
 }
