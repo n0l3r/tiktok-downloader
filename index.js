@@ -18,7 +18,7 @@ const getChoice = () => new Promise((resolve, reject) => {
             type: "list",
             name: "choice",
             message: "Choose a option",
-            choices: ["Mass Download (Username)", "Single Download (URL)"]
+            choices: ["Mass Download (Username)", "Mass Download (URL)", "Single Download (URL)"]
         },
         {
             type: "list",
@@ -127,6 +127,17 @@ const getListVideoByUsername = async (username) => {
     
     return listVideo
 }
+const getRedirectUrl = async (url) => {
+    if(url.includes("vm.tiktok.com") || url.includes("vt.tiktok.com")) {
+        url = await fetch(url, {
+            redirect: "follow",
+            follow: 10,
+        });
+        url = url.url;
+        console.log(chalk.green("[*] Redirecting to: " + url));
+    }
+    return url;
+}
 
 const getIdVideo = (url) => {
     const matching = url.includes("/video/")
@@ -142,7 +153,7 @@ const getIdVideo = (url) => {
     const header = "\r\n \/$$$$$$$$ \/$$$$$$ \/$$   \/$$ \/$$$$$$$$ \/$$$$$$  \/$$   \/$$       \/$$$$$$$   \/$$$$$$  \/$$      \/$$ \/$$   \/$$ \/$$        \/$$$$$$   \/$$$$$$  \/$$$$$$$  \/$$$$$$$$ \/$$$$$$$ \r\n|__  $$__\/|_  $$_\/| $$  \/$$\/|__  $$__\/\/$$__  $$| $$  \/$$\/      | $$__  $$ \/$$__  $$| $$  \/$ | $$| $$$ | $$| $$       \/$$__  $$ \/$$__  $$| $$__  $$| $$_____\/| $$__  $$\r\n   | $$     | $$  | $$ \/$$\/    | $$  | $$  \\ $$| $$ \/$$\/       | $$  \\ $$| $$  \\ $$| $$ \/$$$| $$| $$$$| $$| $$      | $$  \\ $$| $$  \\ $$| $$  \\ $$| $$      | $$  \\ $$\r\n   | $$     | $$  | $$$$$\/     | $$  | $$  | $$| $$$$$\/        | $$  | $$| $$  | $$| $$\/$$ $$ $$| $$ $$ $$| $$      | $$  | $$| $$$$$$$$| $$  | $$| $$$$$   | $$$$$$$\/\r\n   | $$     | $$  | $$  $$     | $$  | $$  | $$| $$  $$        | $$  | $$| $$  | $$| $$$$_  $$$$| $$  $$$$| $$      | $$  | $$| $$__  $$| $$  | $$| $$__\/   | $$__  $$\r\n   | $$     | $$  | $$\\  $$    | $$  | $$  | $$| $$\\  $$       | $$  | $$| $$  | $$| $$$\/ \\  $$$| $$\\  $$$| $$      | $$  | $$| $$  | $$| $$  | $$| $$      | $$  \\ $$\r\n   | $$    \/$$$$$$| $$ \\  $$   | $$  |  $$$$$$\/| $$ \\  $$      | $$$$$$$\/|  $$$$$$\/| $$\/   \\  $$| $$ \\  $$| $$$$$$$$|  $$$$$$\/| $$  | $$| $$$$$$$\/| $$$$$$$$| $$  | $$\r\n   |__\/   |______\/|__\/  \\__\/   |__\/   \\______\/ |__\/  \\__\/      |_______\/  \\______\/ |__\/     \\__\/|__\/  \\__\/|________\/ \\______\/ |__\/  |__\/|_______\/ |________\/|__\/  |__\/\r\n\n by n0l3r (https://github.com/n0l3r)\n"
     console.log(chalk.blue(header))
     const choice = await getChoice();
-    var listVideo;
+    var listVideo = [];
     var listMedia = [];
     if (choice.choice === "Mass Download (Username)") {
         const usernameInput = await getInput("Enter the username with @ (e.g. @username) : ");
@@ -153,20 +164,24 @@ const getIdVideo = (url) => {
             console.log(chalk.yellow("[!] Error: No video found"));
             exit();
         }
-        
-    } else{
+    } else if (choice.choice === "Mass Download (URL)") {
+        var urls = [];
+        const count = await getInput("Enter the number of URL : "); 
+        for(var i = 0; i < count.input; i++) {
+            const urlInput = await getInput("Enter the URL : ");
+            urls.push(urlInput.input);
+        }
+
+        for(var i = 0; i < urls.length; i++) {
+            const url = await getRedirectUrl(urls[i]);
+            const idVideo = await getIdVideo(url);
+            listVideo.push(idVideo);
+        }
+    } else {
         const urlInput = await getInput("Enter the URL : ");
-        var url = urlInput.input;
-        if(url.includes("vm.tiktok.com") || url.includes("vt.tiktok.com")) {
-            url = await fetch(url, {
-                redirect: "follow",
-                follow: 10,
-            });
-            url = url.url;
-            console.log(chalk.green("[*] Redirecting to: " + url));
-        } 
+        const url = await getRedirectUrl(urlInput.input);
         const idVideo = await getIdVideo(url);
-        listVideo = [idVideo];
+        listVideo.push(idVideo);
     }
 
     console.log(chalk.green(`[!] Found ${listVideo.length} video`));
