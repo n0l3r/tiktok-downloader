@@ -1,3 +1,8 @@
+/*  by Naufal Taufiq Ridwan
+    Github : https://github.com/n0l3r
+    Don't remove credit.
+*/
+
 const fetch = require("node-fetch");
 const chalk = require("chalk");
 const inquirer = require("inquirer");
@@ -22,7 +27,10 @@ const getChoice = () => new Promise((resolve, reject) => {
             choices: ["With Watermark", "Without Watermark"]
         }
     ])
-    .then(res => resolve(res))
+    .then(res => {
+        if(res.choice == "Exit") exit()
+        resolve(res)
+    })
     .catch(err => reject(err));
 });
 
@@ -98,12 +106,7 @@ const getVideoNoWM = async (idVideo) => {
 
 
 const getListVideoByUsername = async (username) => {
-    var baseUrl = "https://www.tiktok.com/";
-    if (username.includes("@")) {
-        baseUrl = `${baseUrl}${username}`;
-    } else {
-        baseUrl = `${baseUrl}@${username}`;
-    }
+    var baseUrl = await generateUrlProfile(username)
     const res = await fetch(baseUrl, {
         headers: {
         "User-Agent":
@@ -139,12 +142,9 @@ const getIdVideo = (url) => {
 }
 
 (async () => {    
+    const header = "\r\n \/$$$$$$$$ \/$$$$$$ \/$$   \/$$ \/$$$$$$$$ \/$$$$$$  \/$$   \/$$       \/$$$$$$$   \/$$$$$$  \/$$      \/$$ \/$$   \/$$ \/$$        \/$$$$$$   \/$$$$$$  \/$$$$$$$  \/$$$$$$$$ \/$$$$$$$ \r\n|__  $$__\/|_  $$_\/| $$  \/$$\/|__  $$__\/\/$$__  $$| $$  \/$$\/      | $$__  $$ \/$$__  $$| $$  \/$ | $$| $$$ | $$| $$       \/$$__  $$ \/$$__  $$| $$__  $$| $$_____\/| $$__  $$\r\n   | $$     | $$  | $$ \/$$\/    | $$  | $$  \\ $$| $$ \/$$\/       | $$  \\ $$| $$  \\ $$| $$ \/$$$| $$| $$$$| $$| $$      | $$  \\ $$| $$  \\ $$| $$  \\ $$| $$      | $$  \\ $$\r\n   | $$     | $$  | $$$$$\/     | $$  | $$  | $$| $$$$$\/        | $$  | $$| $$  | $$| $$\/$$ $$ $$| $$ $$ $$| $$      | $$  | $$| $$$$$$$$| $$  | $$| $$$$$   | $$$$$$$\/\r\n   | $$     | $$  | $$  $$     | $$  | $$  | $$| $$  $$        | $$  | $$| $$  | $$| $$$$_  $$$$| $$  $$$$| $$      | $$  | $$| $$__  $$| $$  | $$| $$__\/   | $$__  $$\r\n   | $$     | $$  | $$\\  $$    | $$  | $$  | $$| $$\\  $$       | $$  | $$| $$  | $$| $$$\/ \\  $$$| $$\\  $$$| $$      | $$  | $$| $$  | $$| $$  | $$| $$      | $$  \\ $$\r\n   | $$    \/$$$$$$| $$ \\  $$   | $$  |  $$$$$$\/| $$ \\  $$      | $$$$$$$\/|  $$$$$$\/| $$\/   \\  $$| $$ \\  $$| $$$$$$$$|  $$$$$$\/| $$  | $$| $$$$$$$\/| $$$$$$$$| $$  | $$\r\n   |__\/   |______\/|__\/  \\__\/   |__\/   \\______\/ |__\/  \\__\/      |_______\/  \\______\/ |__\/     \\__\/|__\/  \\__\/|________\/ \\______\/ |__\/  |__\/|_______\/ |________\/|__\/  |__\/\r\n\n by n0l3r (https://github.com/n0l3r)\n"
+    console.log(chalk.blue(header))
     const choice = await getChoice();
-    if(choice.choice === "Exit"){
-        console.log(chalk.red("[*] Exiting..."));
-        exit();
-    }
-
     var listVideo;
     var listMedia = [];
     if (choice.choice === "Mass Download (Username)") {
