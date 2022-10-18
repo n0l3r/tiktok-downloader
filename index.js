@@ -12,6 +12,11 @@ const puppeteer = require("puppeteer");
 const { exit } = require("process");
 const { resolve } = require("path");
 const { reject } = require("lodash");
+const {Headers} = require('node-fetch');
+
+const headers = new Headers();
+
+headers.append('User-Agent', 'TikTok 26.2.0 rv:262018 (iPhone; iOS 14.4.2; en_US) Cronet');
 
 const getChoice = () => new Promise((resolve, reject) => {
     inquirer.prompt([
@@ -74,14 +79,17 @@ const downloadMediaFromList = async (list) => {
     });
 }
 
+
+
 const getVideoWM = async (url) => {
     const idVideo = await getIdVideo(url)
-    const API_URL = `https://api.tiktokv.com/aweme/v1/multi/aweme/detail/?aweme_ids=%5B${idVideo}%5b`;
+    const API_URL = `https://api.tiktokv.com/aweme/v1/feed/?aweme_id=${idVideo}&version_code=262&app_name=musical_ly&channel=App&device_id=null&os_version=14.4.2&device_platform=iphone&device_type=iPhone9`;
     const request = await fetch(API_URL, {
-        method: "GET"
+        method: "GET",
+        headers : headers
     });
     const res = await request.json()
-    const urlMedia = res.aweme_details[0].video.download_addr.url_list[0]
+    const urlMedia = res.aweme_list[0].video.download_addr.url_list[0]
     const data = {
         url: urlMedia,
         id: idVideo
@@ -89,14 +97,16 @@ const getVideoWM = async (url) => {
     return data
 }
 
+
 const getVideoNoWM = async (url) => {
     const idVideo = await getIdVideo(url)
-    const API_URL = `https://api.tiktokv.com/aweme/v1/multi/aweme/detail/?aweme_ids=%5B${idVideo}%5b`;
+    const API_URL = `https://api.tiktokv.com/aweme/v1/feed/?aweme_id=${idVideo}&version_code=262&app_name=musical_ly&channel=App&device_id=null&os_version=14.4.2&device_platform=iphone&device_type=iPhone9`;
     const request = await fetch(API_URL, {
-        method: "GET"
+        method: "GET",
+        headers : headers
     });
     const res = await request.json()
-    const urlMedia = res.aweme_details[0].video.play_addr.url_list[0]
+    const urlMedia = res.aweme_list[0].video.play_addr.url_list[0]
     const data = {
         url: urlMedia,
         id: idVideo
@@ -111,6 +121,9 @@ const getListVideoByUsername = async (username) => {
         headless: true,
     })
     const page = await browser.newPage()
+    page.setUserAgent(
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/85.0.4182.0 Safari/537.36"
+      );
     await page.goto(baseUrl)
     var listVideo = []
     console.log(chalk.green("[*] Getting list video from: " + username))
