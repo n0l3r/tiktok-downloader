@@ -13,7 +13,6 @@
     "buffer": "^5.7.1",
     "chalk": "^2.4.2",
     "chardet": "^0.7.0",
-    "cheerio": "^1.0.0-rc.10",
     "cheerio-select": "^1.6.0",
     "cli-cursor": "^3.1.0",
     "cli-spinners": "^2.6.1",
