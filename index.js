@@ -6,7 +6,6 @@
 const fetch = require("node-fetch");
 const chalk = require("chalk");
 const inquirer = require("inquirer");
-const cheerio = require("cheerio");
 const fs = require("fs");
 const puppeteer = require("puppeteer");
 const { exit } = require("process");
@@ -14,9 +13,12 @@ const { resolve } = require("path");
 const { reject } = require("lodash");
 const {Headers} = require('node-fetch');
 
-const headers = new Headers();
 
+//adding useragent to avoid ip bans
+const headers = new Headers();
 headers.append('User-Agent', 'TikTok 26.2.0 rv:262018 (iPhone; iOS 14.4.2; en_US) Cronet');
+const headersWm = new Headers();
+headersWm.append('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/107.0.0.0 Safari/537.36');
 
 const getChoice = () => new Promise((resolve, reject) => {
     inquirer.prompt([
@@ -83,37 +85,40 @@ const downloadMediaFromList = async (list) => {
 
 const getVideoWM = async (url) => {
     const idVideo = await getIdVideo(url)
-    const API_URL = `https://api.tiktokv.com/aweme/v1/feed/?aweme_id=${idVideo}&version_code=262&app_name=musical_ly&channel=App&device_id=null&os_version=14.4.2&device_platform=iphone&device_type=iPhone9`;
-    const request = await fetch(API_URL, {
+    const request = await fetch(url, {
         method: "GET",
-        headers : headers
+        headers:headersWm
     });
-    const res = await request.json()
-    const urlMedia = res.aweme_list[0].video.download_addr.url_list[0]
+    const res = await request.text()
+    const urlMedia = res.toString().match(/\{"url":"[^"]*"/g).toString().split('"')[3].replace(/\\u002F/g, "/");
     const data = {
         url: urlMedia,
         id: idVideo
     }
     return data
 }
-
 
 const getVideoNoWM = async (url) => {
     const idVideo = await getIdVideo(url)
-    const API_URL = `https://api.tiktokv.com/aweme/v1/feed/?aweme_id=${idVideo}&version_code=262&app_name=musical_ly&channel=App&device_id=null&os_version=14.4.2&device_platform=iphone&device_type=iPhone9`;
+    const API_URL = `https://api19-core-useast5.us.tiktokv.com/aweme/v1/feed/?aweme_id=${idVideo}&version_code=262&app_name=musical_ly&channel=App&device_id=null&os_version=14.4.2&device_platform=iphone&device_type=iPhone9`;
     const request = await fetch(API_URL, {
         method: "GET",
         headers : headers
     });
-    const res = await request.json()
-    const urlMedia = res.aweme_list[0].video.play_addr.url_list[0]
-    const data = {
-        url: urlMedia,
-        id: idVideo
-    }
-    return data
+    const body = await request.text();
+                try {
+                 var res = JSON.parse(body);
+                } catch (err) {
+                    console.error("Error:", err);
+                    console.error("Response body:", body);
+                }
+                const urlMedia = res.aweme_list[0].video.play_addr.url_list[0]
+                const data = {
+                    url: urlMedia,
+                    id: idVideo
+                }
+                return data
 }
-
 
 const getListVideoByUsername = async (username) => {
     var baseUrl = await generateUrlProfile(username)
