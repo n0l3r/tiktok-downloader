@@ -12,6 +12,7 @@ const { exit } = require("process");
 const { resolve } = require("path");
 const { reject } = require("lodash");
 const {Headers} = require('node-fetch');
+const readline = require('readline');
 
 
 //adding useragent to avoid ip bans
@@ -26,7 +27,7 @@ const getChoice = () => new Promise((resolve, reject) => {
             type: "list",
             name: "choice",
             message: "Choose a option",
-            choices: ["Mass Download (Username)", "Mass Download (URL)", "Single Download (URL)"]
+            choices: ["Mass Download (Username)", "Mass Download with (txt)", "Single Download (URL)"]
         },
         {
             type: "list",
@@ -68,8 +69,6 @@ const downloadMediaFromList = async (list) => {
         const downloadFile = fetch(item.url)
         const file = fs.createWriteStream(folder + fileName)
         
-        console.log(chalk.green(`[+] Downloading ${fileName}`))
-
         downloadFile.then(res => {
             res.body.pipe(file)
             file.on("finish", () => {
@@ -85,22 +84,29 @@ const downloadMediaFromList = async (list) => {
 
 const getVideoWM = async (url) => {
     const idVideo = await getIdVideo(url)
-    const request = await fetch(url, {
+    const API_URL = `https://api16-normal-c-useast1a.tiktokv.com/aweme/v1/feed/?aweme_id=${idVideo}`;
+    const request = await fetch(API_URL, {
         method: "GET",
-        headers:headersWm
+        headers : headers
     });
-    const res = await request.text()
-    const urlMedia = res.toString().match(/\{"url":"[^"]*"/g).toString().split('"')[3].replace(/\\u002F/g, "/");
-    const data = {
-        url: urlMedia,
-        id: idVideo
-    }
-    return data
+    const body = await request.text();
+                try {
+                 var res = JSON.parse(body);
+                } catch (err) {
+                    console.error("Error:", err);
+                    console.error("Response body:", body);
+                }
+                const urlMedia = res.aweme_list[0].video.download_suffix_logo_addr.url_list[0]
+                const data = {
+                    url: urlMedia,
+                    id: idVideo
+                }
+                return data
 }
 
 const getVideoNoWM = async (url) => {
     const idVideo = await getIdVideo(url)
-    const API_URL = `https://api19-core-useast5.us.tiktokv.com/aweme/v1/feed/?aweme_id=${idVideo}&version_code=262&app_name=musical_ly&channel=App&device_id=null&os_version=14.4.2&device_platform=iphone&device_type=iPhone9`;
+    const API_URL = `https://api16-normal-c-useast1a.tiktokv.com/aweme/v1/feed/?aweme_id=${idVideo}`;
     const request = await fetch(API_URL, {
         method: "GET",
         headers : headers
@@ -188,18 +194,32 @@ const getIdVideo = (url) => {
             console.log(chalk.yellow("[!] Error: No video found"));
             exit();
         }
-    } else if (choice.choice === "Mass Download (URL)") {
+    } else if (choice.choice === "Mass Download with (txt)") {
         var urls = [];
-        const count = await getInput("Enter the number of URL : "); 
-        for(var i = 0; i < count.input; i++) {
-            const urlInput = await getInput("Enter the URL : ");
-            urls.push(urlInput.input);
+        // Get URL from file
+        const fileInput = await getInput("Enter the file path : ");
+        const file = fileInput.input;
+
+        if(!fs.existsSync(file)) {
+            console.log(chalk.red("[X] Error: File not found"));
+            exit();
         }
+
+        // read file line by line
+        const rl = readline.createInterface({
+            input: fs.createReadStream(file),
+            crlfDelay: Infinity
+        });
+
+        for await (const line of rl) {
+            urls.push(line);
+            console.log(chalk.green(`[*] Found URL: ${line}`));
+        }
+        
 
         for(var i = 0; i < urls.length; i++) {
             const url = await getRedirectUrl(urls[i]);
-            const idVideo = await getIdVideo(url);
-            listVideo.push(idVideo);
+            listVideo.push(url);
         }
     } else {
         const urlInput = await getInput("Enter the URL : ");
@@ -211,7 +231,10 @@ const getIdVideo = (url) => {
 
 
     for(var i = 0; i < listVideo.length; i++){
+        console.log(chalk.green(`[*] Downloading video ${i+1} of ${listVideo.length}`));
+        console.log(chalk.green(`[*] URL: ${listVideo[i]}`));
         var data = (choice.type == "With Watermark") ? await getVideoWM(listVideo[i]) : await getVideoNoWM(listVideo[i]);
+
         listMedia.push(data);
     }
 
