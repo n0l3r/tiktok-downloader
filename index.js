@@ -96,7 +96,7 @@ const getVideoWM = async (url) => {
                     console.error("Error:", err);
                     console.error("Response body:", body);
                 }
-                const urlMedia = res.aweme_list[0].video.download_suffix_logo_addr.url_list[0]
+                const urlMedia = res.aweme_list[0].video.download_addr.url_list[0]
                 const data = {
                     url: urlMedia,
                     id: idVideo
@@ -129,7 +129,7 @@ const getVideoNoWM = async (url) => {
 const getListVideoByUsername = async (username) => {
     var baseUrl = await generateUrlProfile(username)
     const browser = await puppeteer.launch({
-        headless: true,
+        headless: false,
     })
     const page = await browser.newPage()
     page.setUserAgent(
