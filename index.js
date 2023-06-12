@@ -141,8 +141,8 @@ const getListVideoByUsername = async (username) => {
     var loop = true
     while(loop) {
         listVideo = await page.evaluate(() => {
-            const listVideo = Array.from(document.querySelectorAll(".tiktok-yz6ijl-DivWrapper > a"));
-            return listVideo.map(item => item.href);
+            const listVideo = Array.from(document.querySelectorAll(".tiktok-1s72ajp-DivWrapper > a"));
+            return listVideo.map(item => item.getAttribute('href'));
         });
         console.log(chalk.green(`[*] ${listVideo.length} video found`))
         previousHeight = await page.evaluate("document.body.scrollHeight");
