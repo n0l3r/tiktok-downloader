@@ -62,21 +62,19 @@ const generateUrlProfile = (username) => {
     return baseUrl;
 };
 
-const downloadMediaFromList = async (list) => {
+const downloadMedia = async (item) => {
     const folder = "downloads/"
-    list.forEach((item) => {
-        const fileName = `${item.id}.mp4`
-        const downloadFile = fetch(item.url)
-        const file = fs.createWriteStream(folder + fileName)
-        
-        downloadFile.then(res => {
-            res.body.pipe(file)
-            file.on("finish", () => {
-                file.close()
-                resolve()
-            });
-            file.on("error", (err) => reject(err));
+    const fileName = `${item.id}.mp4`
+    const downloadFile = fetch(item.url)
+    const file = fs.createWriteStream(folder + fileName)
+    
+    downloadFile.then(res => {
+        res.body.pipe(file)
+        file.on("finish", () => {
+            file.close()
+            resolve()
         });
+        file.on("error", (err) => reject(err));
     });
 }
 
@@ -189,7 +187,6 @@ const getIdVideo = (url) => {
     console.log(chalk.blue(header))
     const choice = await getChoice();
     var listVideo = [];
-    var listMedia = [];
     if (choice.choice === "Mass Download (Username)") {
         const usernameInput = await getInput("Enter the username with @ (e.g. @username) : ");
         const username = usernameInput.input;
@@ -239,16 +236,11 @@ const getIdVideo = (url) => {
         console.log(chalk.green(`[*] URL: ${listVideo[i]}`));
         var data = (choice.type == "With Watermark") ? await getVideoWM(listVideo[i]) : await getVideoNoWM(listVideo[i]);
 
-        listMedia.push(data);
-    }
-
-    downloadMediaFromList(listMedia)
-        .then(() => {
+        downloadMedia(data).then(() => {
             console.log(chalk.green("[+] Downloaded successfully"));
         })
         .catch(err => {
             console.log(chalk.red("[X] Error: " + err));
-    });
-    
-
+        });
+    }
 })();
