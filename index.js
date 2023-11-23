@@ -63,46 +63,48 @@ const generateUrlProfile = (username) => {
 };
 
 const downloadMedia = async (item) => {
-    const folder = "downloads/"
-    const fileName = `${item.id}.mp4`
-    const downloadFile = fetch(item.url)
-    const file = fs.createWriteStream(folder + fileName)
-    
-    downloadFile.then(res => {
-        res.body.pipe(file)
-        file.on("finish", () => {
-            file.close()
-            resolve()
+    const folder = "downloads/";
+
+    // check for slideshow
+    if (item.images.length != 0) {
+        console.log(chalk.green("[*] Downloading Sildeshow"));
+
+        let index = 0;
+        item.images.forEach(image_url => {
+            const fileName = `${item.id}_${index}.jpeg`;
+            index++;
+            const downloadFile = fetch(image_url);
+            const file = fs.createWriteStream(folder + fileName);
+            
+            downloadFile.then(res => {
+                res.body.pipe(file)
+                file.on("finish", () => {
+                    file.close()
+                    resolve()
+                });
+                file.on("error", (err) => reject(err));
+            });
         });
-        file.on("error", (err) => reject(err));
-    });
+
+        return;
+    } else {
+        const fileName = `${item.id}.mp4`;
+        const downloadFile = fetch(item.url);
+        const file = fs.createWriteStream(folder + fileName);
+        
+        downloadFile.then(res => {
+            res.body.pipe(file)
+            file.on("finish", () => {
+                file.close()
+                resolve()
+            });
+            file.on("error", (err) => reject(err));
+        });
+    }
 }
 
-
-
-const getVideoWM = async (url) => {
-    const idVideo = await getIdVideo(url)
-    const API_URL = `https://api16-normal-c-useast1a.tiktokv.com/aweme/v1/feed/?aweme_id=${idVideo}`;
-    const request = await fetch(API_URL, {
-        method: "GET",
-        headers : headers
-    });
-    const body = await request.text();
-                try {
-                 var res = JSON.parse(body);
-                } catch (err) {
-                    console.error("Error:", err);
-                    console.error("Response body:", body);
-                }
-                const urlMedia = res.aweme_list[0].video.download_addr.url_list[0]
-                const data = {
-                    url: urlMedia,
-                    id: idVideo
-                }
-                return data
-}
-
-const getVideoNoWM = async (url) => {
+// url contains the url, watermark is a bool that tells us what link to use
+const getVideo = async (url, watermark) => {
     const idVideo = await getIdVideo(url)
     const API_URL = `https://api16-normal-c-useast1a.tiktokv.com/aweme/v1/feed/?aweme_id=${idVideo}`;
     const request = await fetch(API_URL, {
@@ -116,12 +118,32 @@ const getVideoNoWM = async (url) => {
         console.error("Error:", err);
         console.error("Response body:", body);
     }
-    const urlMedia = res.aweme_list[0].video.play_addr.url_list[0]
+
+    const urlMedia = "";
+
+    let image_urls = []
+    // check if video is slideshow
+    if (!!res.aweme_list[0].image_post_info) {
+        console.log(chalk.green("[*] Video is slideshow"));
+
+        // get all image urls
+        res.aweme_list[0].image_post_info.images.forEach(element => {
+            // url_list[0] contains a webp
+            // url_list[1] contains a jpeg
+            image_urls.push(element.display_image.url_list[1]);
+        });
+
+    } else {
+        // download_addr vs play_addr
+        const urlMedia = (watermark) ? res.aweme_list[0].video.download_addr.url_list[0] : res.aweme_list[0].video.play_addr.url_list[0];
+    }
+
     const data = {
         url: urlMedia,
+        images: image_urls,
         id: idVideo
     }
-    return data
+    return data;
 }
 
 const getListVideoByUsername = async (username) => {
@@ -234,7 +256,7 @@ const getIdVideo = (url) => {
     for(var i = 0; i < listVideo.length; i++){
         console.log(chalk.green(`[*] Downloading video ${i+1} of ${listVideo.length}`));
         console.log(chalk.green(`[*] URL: ${listVideo[i]}`));
-        var data = (choice.type == "With Watermark") ? await getVideoWM(listVideo[i]) : await getVideoNoWM(listVideo[i]);
+        var data = await getVideo(listVideo[i], (choice.type == "With Watermark"));
 
         downloadMedia(data).then(() => {
             console.log(chalk.green("[+] Downloaded successfully"));
