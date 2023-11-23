@@ -112,18 +112,18 @@ const getVideoNoWM = async (url) => {
         headers : headers
     });
     const body = await request.text();
-                try {
-                 var res = JSON.parse(body);
-                } catch (err) {
-                    console.error("Error:", err);
-                    console.error("Response body:", body);
-                }
-                const urlMedia = res.aweme_list[0].video.play_addr.url_list[0]
-                const data = {
-                    url: urlMedia,
-                    id: idVideo
-                }
-                return data
+    try {
+        var res = JSON.parse(body);
+    } catch (err) {
+        console.error("Error:", err);
+        console.error("Response body:", body);
+    }
+    const urlMedia = res.aweme_list[0].video.play_addr.url_list[0]
+    const data = {
+        url: urlMedia,
+        id: idVideo
+    }
+    return data
 }
 
 const getListVideoByUsername = async (username) => {
@@ -179,7 +179,8 @@ const getIdVideo = (url) => {
         console.log(chalk.red("[X] Error: URL not found"));
         exit();
     }
-    const idVideo = url.substring(url.indexOf("/video/") + 7, url.length);
+    // Tiktok ID is usually 19 characters long and sits after /video/
+    let idVideo = url.substring(url.indexOf("/video/") + 7, url.indexOf("/video/") + 26);
     return (idVideo.length > 19) ? idVideo.substring(0, idVideo.indexOf("?")) : idVideo;
 }
 
