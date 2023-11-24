@@ -18,8 +18,6 @@ const readline = require('readline');
 //adding useragent to avoid ip bans
 const headers = new Headers();
 headers.append('User-Agent', 'TikTok 26.2.0 rv:262018 (iPhone; iOS 14.4.2; en_US) Cronet');
-const headersWm = new Headers();
-headersWm.append('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/107.0.0.0 Safari/537.36');
 
 const getChoice = () => new Promise((resolve, reject) => {
     inquirer.prompt([
