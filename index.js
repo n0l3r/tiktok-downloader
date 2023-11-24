@@ -129,6 +129,11 @@ const getVideo = async (url, watermark) => {
         console.error("Response body:", body);
     }
 
+    // check if video was deleted
+    if (res.aweme_list[0].aweme_id != idVideo) {
+        return null;
+    }
+
     let urlMedia = "";
 
     let image_urls = []
@@ -266,11 +271,18 @@ const getIdVideo = (url) => {
 
     console.log(chalk.green(`[!] Found ${listVideo.length} video`));
 
-
+    let deleted_videos_count = 0;
     for(var i = 0; i < listVideo.length; i++){
         console.log(chalk.green(`[*] Downloading video ${i+1} of ${listVideo.length}`));
         console.log(chalk.green(`[*] URL: ${listVideo[i]}`));
         var data = await getVideo(listVideo[i], (choice.type == "With Watermark"));
+
+        // check if video was deleted => data empty
+        if (data == null) {
+            console.log(chalk.yellow(`[!] Video ${i+1} was deleted!`));
+            deleted_videos_count++;
+            continue;
+        }
 
         downloadMedia(data).then(() => {
             console.log(chalk.green("[+] Downloaded successfully"));
@@ -279,4 +291,6 @@ const getIdVideo = (url) => {
             console.log(chalk.red("[X] Error: " + err));
         });
     }
+
+    console.log(chalk.yellow(`[!] ${deleted_videos_count} of ${listVideo.length} videos were deleted!`));
 })();
