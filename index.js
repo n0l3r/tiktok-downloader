@@ -72,6 +72,11 @@ const downloadMedia = async (item) => {
         let index = 0;
         item.images.forEach(image_url => {
             const fileName = `${item.id}_${index}.jpeg`;
+            // check if file was already downloaded
+            if (fs.existsSync(folder + fileName)) {
+                console.log(chalk.yellow(`[!] File '${fileName}' already exists. Skipping`));
+                return;
+            }
             index++;
             const downloadFile = fetch(image_url);
             const file = fs.createWriteStream(folder + fileName);
@@ -89,6 +94,12 @@ const downloadMedia = async (item) => {
         return;
     } else {
         const fileName = `${item.id}.mp4`;
+        // check if file was already downloaded
+        if (fs.existsSync(folder + fileName)) {
+            console.log(chalk.yellow(`[!] File '${fileName}' already exists. Skipping`));
+            return;
+        }
+        console.log("url: " + item.url);
         const downloadFile = fetch(item.url);
         const file = fs.createWriteStream(folder + fileName);
         
@@ -119,7 +130,7 @@ const getVideo = async (url, watermark) => {
         console.error("Response body:", body);
     }
 
-    const urlMedia = "";
+    let urlMedia = "";
 
     let image_urls = []
     // check if video is slideshow
@@ -135,7 +146,7 @@ const getVideo = async (url, watermark) => {
 
     } else {
         // download_addr vs play_addr
-        const urlMedia = (watermark) ? res.aweme_list[0].video.download_addr.url_list[0] : res.aweme_list[0].video.play_addr.url_list[0];
+        urlMedia = (watermark) ? res.aweme_list[0].video.download_addr.url_list[0] : res.aweme_list[0].video.play_addr.url_list[0];
     }
 
     const data = {
