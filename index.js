@@ -99,7 +99,6 @@ const downloadMedia = async (item) => {
             console.log(chalk.yellow(`[!] File '${fileName}' already exists. Skipping`));
             return;
         }
-        console.log("url: " + item.url);
         const downloadFile = fetch(item.url);
         const file = fs.createWriteStream(folder + fileName);
         
@@ -246,6 +245,10 @@ const getIdVideo = (url) => {
         });
 
         for await (const line of rl) {
+            if (urls.includes(line)) {
+                console.log(chalk.yellow(`[!] Skipping duplicate entry: ${line}`));
+                continue;
+            }
             urls.push(line);
             console.log(chalk.green(`[*] Found URL: ${line}`));
         }
