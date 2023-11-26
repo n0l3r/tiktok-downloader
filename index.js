@@ -18,8 +18,6 @@ const readline = require('readline');
 //adding useragent to avoid ip bans
 const headers = new Headers();
 headers.append('User-Agent', 'TikTok 26.2.0 rv:262018 (iPhone; iOS 14.4.2; en_US) Cronet');
-const headersWm = new Headers();
-headersWm.append('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/107.0.0.0 Safari/537.36');
 
 const getChoice = () => new Promise((resolve, reject) => {
     inquirer.prompt([
@@ -62,12 +60,45 @@ const generateUrlProfile = (username) => {
     return baseUrl;
 };
 
-const downloadMediaFromList = async (list) => {
-    const folder = "downloads/"
-    list.forEach((item) => {
-        const fileName = `${item.id}.mp4`
-        const downloadFile = fetch(item.url)
-        const file = fs.createWriteStream(folder + fileName)
+const downloadMedia = async (item) => {
+    const folder = "downloads/";
+
+    // check for slideshow
+    if (item.images.length != 0) {
+        console.log(chalk.green("[*] Downloading Sildeshow"));
+
+        let index = 0;
+        item.images.forEach(image_url => {
+            const fileName = `${item.id}_${index}.jpeg`;
+            // check if file was already downloaded
+            if (fs.existsSync(folder + fileName)) {
+                console.log(chalk.yellow(`[!] File '${fileName}' already exists. Skipping`));
+                return;
+            }
+            index++;
+            const downloadFile = fetch(image_url);
+            const file = fs.createWriteStream(folder + fileName);
+            
+            downloadFile.then(res => {
+                res.body.pipe(file)
+                file.on("finish", () => {
+                    file.close()
+                    resolve()
+                });
+                file.on("error", (err) => reject(err));
+            });
+        });
+
+        return;
+    } else {
+        const fileName = `${item.id}.mp4`;
+        // check if file was already downloaded
+        if (fs.existsSync(folder + fileName)) {
+            console.log(chalk.yellow(`[!] File '${fileName}' already exists. Skipping`));
+            return;
+        }
+        const downloadFile = fetch(item.url);
+        const file = fs.createWriteStream(folder + fileName);
         
         downloadFile.then(res => {
             res.body.pipe(file)
@@ -77,12 +108,11 @@ const downloadMediaFromList = async (list) => {
             });
             file.on("error", (err) => reject(err));
         });
-    });
+    }
 }
 
-
-
-const getVideoWM = async (url) => {
+// url contains the url, watermark is a bool that tells us what link to use
+const getVideo = async (url, watermark) => {
     const idVideo = await getIdVideo(url)
     const API_URL = `https://api16-normal-c-useast1a.tiktokv.com/aweme/v1/feed/?aweme_id=${idVideo}`;
     const request = await fetch(API_URL, {
@@ -90,40 +120,43 @@ const getVideoWM = async (url) => {
         headers : headers
     });
     const body = await request.text();
-                try {
-                 var res = JSON.parse(body);
-                } catch (err) {
-                    console.error("Error:", err);
-                    console.error("Response body:", body);
-                }
-                const urlMedia = res.aweme_list[0].video.download_addr.url_list[0]
-                const data = {
-                    url: urlMedia,
-                    id: idVideo
-                }
-                return data
-}
+    try {
+        var res = JSON.parse(body);
+    } catch (err) {
+        console.error("Error:", err);
+        console.error("Response body:", body);
+    }
 
-const getVideoNoWM = async (url) => {
-    const idVideo = await getIdVideo(url)
-    const API_URL = `https://api16-normal-c-useast1a.tiktokv.com/aweme/v1/feed/?aweme_id=${idVideo}`;
-    const request = await fetch(API_URL, {
-        method: "GET",
-        headers : headers
-    });
-    const body = await request.text();
-                try {
-                 var res = JSON.parse(body);
-                } catch (err) {
-                    console.error("Error:", err);
-                    console.error("Response body:", body);
-                }
-                const urlMedia = res.aweme_list[0].video.play_addr.url_list[0]
-                const data = {
-                    url: urlMedia,
-                    id: idVideo
-                }
-                return data
+    // check if video was deleted
+    if (res.aweme_list[0].aweme_id != idVideo) {
+        return null;
+    }
+
+    let urlMedia = "";
+
+    let image_urls = []
+    // check if video is slideshow
+    if (!!res.aweme_list[0].image_post_info) {
+        console.log(chalk.green("[*] Video is slideshow"));
+
+        // get all image urls
+        res.aweme_list[0].image_post_info.images.forEach(element => {
+            // url_list[0] contains a webp
+            // url_list[1] contains a jpeg
+            image_urls.push(element.display_image.url_list[1]);
+        });
+
+    } else {
+        // download_addr vs play_addr
+        urlMedia = (watermark) ? res.aweme_list[0].video.download_addr.url_list[0] : res.aweme_list[0].video.play_addr.url_list[0];
+    }
+
+    const data = {
+        url: urlMedia,
+        images: image_urls,
+        id: idVideo
+    }
+    return data;
 }
 
 const getListVideoByUsername = async (username) => {
@@ -179,7 +212,8 @@ const getIdVideo = (url) => {
         console.log(chalk.red("[X] Error: URL not found"));
         exit();
     }
-    const idVideo = url.substring(url.indexOf("/video/") + 7, url.length);
+    // Tiktok ID is usually 19 characters long and sits after /video/
+    let idVideo = url.substring(url.indexOf("/video/") + 7, url.indexOf("/video/") + 26);
     return (idVideo.length > 19) ? idVideo.substring(0, idVideo.indexOf("?")) : idVideo;
 }
 
@@ -188,7 +222,6 @@ const getIdVideo = (url) => {
     console.log(chalk.blue(header))
     const choice = await getChoice();
     var listVideo = [];
-    var listMedia = [];
     if (choice.choice === "Mass Download (Username)") {
         const usernameInput = await getInput("Enter the username with @ (e.g. @username) : ");
         const username = usernameInput.input;
@@ -215,6 +248,10 @@ const getIdVideo = (url) => {
         });
 
         for await (const line of rl) {
+            if (urls.includes(line)) {
+                console.log(chalk.yellow(`[!] Skipping duplicate entry: ${line}`));
+                continue;
+            }
             urls.push(line);
             console.log(chalk.green(`[*] Found URL: ${line}`));
         }
@@ -232,22 +269,26 @@ const getIdVideo = (url) => {
 
     console.log(chalk.green(`[!] Found ${listVideo.length} video`));
 
-
+    let deleted_videos_count = 0;
     for(var i = 0; i < listVideo.length; i++){
         console.log(chalk.green(`[*] Downloading video ${i+1} of ${listVideo.length}`));
         console.log(chalk.green(`[*] URL: ${listVideo[i]}`));
-        var data = (choice.type == "With Watermark") ? await getVideoWM(listVideo[i]) : await getVideoNoWM(listVideo[i]);
+        var data = await getVideo(listVideo[i], (choice.type == "With Watermark"));
 
-        listMedia.push(data);
-    }
+        // check if video was deleted => data empty
+        if (data == null) {
+            console.log(chalk.yellow(`[!] Video ${i+1} was deleted!`));
+            deleted_videos_count++;
+            continue;
+        }
 
-    downloadMediaFromList(listMedia)
-        .then(() => {
+        downloadMedia(data).then(() => {
             console.log(chalk.green("[+] Downloaded successfully"));
         })
         .catch(err => {
             console.log(chalk.red("[X] Error: " + err));
-    });
-    
+        });
+    }
 
+    console.log(chalk.yellow(`[!] ${deleted_videos_count} of ${listVideo.length} videos were deleted!`));
 })();
