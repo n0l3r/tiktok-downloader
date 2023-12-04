@@ -14,7 +14,19 @@ const { reject } = require("lodash");
 const {Headers} = require('node-fetch');
 const readline = require('readline');
 
-
+const argv = process.argv.slice(2)
+const getargvInfo = () => {
+const URL = argv[0].startsWith('http') ? argv[0] : null
+const txtFile = argv.indexOf('--txt') > 0 : argv.indexOf('--txt') + 1 : null
+const type = argv.includes('--username') ? 'Mass Download (Username)' : argv.includes('--txt') ? 'Mass Download with (txt)' : argv.includes('--single')? 'Single Download (URL)' : 'Single Download (URL)'
+const watermark = argv.includes('--no-watermark') ? 'Without Watermark':'With Watermark'
+return {
+choice:type,
+URL,
+type:watermark,
+useArgv: type && watermark && (URL || txtFile)
+}
+}
 //adding useragent to avoid ip bans
 const headers = new Headers();
 headers.append('User-Agent', 'TikTok 26.2.0 rv:262018 (iPhone; iOS 14.4.2; en_US) Cronet');
@@ -220,11 +232,17 @@ const getIdVideo = (url) => {
 (async () => {    
     const header = "\r\n \/$$$$$$$$ \/$$$$$$ \/$$   \/$$ \/$$$$$$$$ \/$$$$$$  \/$$   \/$$       \/$$$$$$$   \/$$$$$$  \/$$      \/$$ \/$$   \/$$ \/$$        \/$$$$$$   \/$$$$$$  \/$$$$$$$  \/$$$$$$$$ \/$$$$$$$ \r\n|__  $$__\/|_  $$_\/| $$  \/$$\/|__  $$__\/\/$$__  $$| $$  \/$$\/      | $$__  $$ \/$$__  $$| $$  \/$ | $$| $$$ | $$| $$       \/$$__  $$ \/$$__  $$| $$__  $$| $$_____\/| $$__  $$\r\n   | $$     | $$  | $$ \/$$\/    | $$  | $$  \\ $$| $$ \/$$\/       | $$  \\ $$| $$  \\ $$| $$ \/$$$| $$| $$$$| $$| $$      | $$  \\ $$| $$  \\ $$| $$  \\ $$| $$      | $$  \\ $$\r\n   | $$     | $$  | $$$$$\/     | $$  | $$  | $$| $$$$$\/        | $$  | $$| $$  | $$| $$\/$$ $$ $$| $$ $$ $$| $$      | $$  | $$| $$$$$$$$| $$  | $$| $$$$$   | $$$$$$$\/\r\n   | $$     | $$  | $$  $$     | $$  | $$  | $$| $$  $$        | $$  | $$| $$  | $$| $$$$_  $$$$| $$  $$$$| $$      | $$  | $$| $$__  $$| $$  | $$| $$__\/   | $$__  $$\r\n   | $$     | $$  | $$\\  $$    | $$  | $$  | $$| $$\\  $$       | $$  | $$| $$  | $$| $$$\/ \\  $$$| $$\\  $$$| $$      | $$  | $$| $$  | $$| $$  | $$| $$      | $$  \\ $$\r\n   | $$    \/$$$$$$| $$ \\  $$   | $$  |  $$$$$$\/| $$ \\  $$      | $$$$$$$\/|  $$$$$$\/| $$\/   \\  $$| $$ \\  $$| $$$$$$$$|  $$$$$$\/| $$  | $$| $$$$$$$\/| $$$$$$$$| $$  | $$\r\n   |__\/   |______\/|__\/  \\__\/   |__\/   \\______\/ |__\/  \\__\/      |_______\/  \\______\/ |__\/     \\__\/|__\/  \\__\/|________\/ \\______\/ |__\/  |__\/|_______\/ |________\/|__\/  |__\/\r\n\n by n0l3r (https://github.com/n0l3r)\n"
     console.log(chalk.blue(header))
-    const choice = await getChoice();
+    const argvInfo = getargvInfo()
+let choice = null;    
+if(!argvInfo.useArgv){
+     choice = await getChoice();
+} else {
+choice = argvInfo()
+}
     var listVideo = [];
     if (choice.choice === "Mass Download (Username)") {
-        const usernameInput = await getInput("Enter the username with @ (e.g. @username) : ");
-        const username = usernameInput.input;
+        const usernameInput = argvInfo.username || await getInput("Enter the username with @ (e.g. @username) : ").then(e=>e.input);
+        const username = usernameInput;
         listVideo = await getListVideoByUsername(username);
         if(listVideo.length === 0) {
             console.log(chalk.yellow("[!] Error: No video found"));
@@ -233,8 +251,8 @@ const getIdVideo = (url) => {
     } else if (choice.choice === "Mass Download with (txt)") {
         var urls = [];
         // Get URL from file
-        const fileInput = await getInput("Enter the file path : ");
-        const file = fileInput.input;
+        const fileInput = argv.file || await getInput("Enter the file path : ").then(e=>e.input);
+        const file = fileInput;
 
         if(!fs.existsSync(file)) {
             console.log(chalk.red("[X] Error: File not found"));
