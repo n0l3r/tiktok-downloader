@@ -62,7 +62,7 @@ const generateUrlProfile = (username) => {
 
 const downloadMedia = async (item) => {
     const folder = "downloads/";
-
+    if (!fs.existsSync(folder)) fs.mkdirSync(folder, {recrusive:true})
     // check for slideshow
     if (item.images.length != 0) {
         console.log(chalk.green("[*] Downloading Sildeshow"));
