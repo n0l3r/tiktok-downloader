@@ -206,7 +206,14 @@ const getRedirectUrl = async (url) => {
     return url;
 }
 
-const getIdVideo = (url) => {
+const getIdVideo = async (url) => {
+    if(url.includes('/t/')) {
+        url = await new Promise((resolve) => {
+            require('follow-redirects').https.get(url, function(res) {
+                return resolve(res.responseUrl)
+            });
+        })
+    }
     const matching = url.includes("/video/")
     if(!matching){
         console.log(chalk.red("[X] Error: URL not found"));
