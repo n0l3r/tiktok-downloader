@@ -297,5 +297,7 @@ const getIdVideo = async (url) => {
         });
     }
 
-    console.log(chalk.yellow(`[!] ${deleted_videos_count} of ${listVideo.length} videos were deleted!`));
+    if(deleted_videos_count > 0) {
+        console.log(chalk.yellow(`[!] ${deleted_videos_count} of ${listVideo.length} videos were deleted!`));
+    }
 })();
