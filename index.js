@@ -16,16 +16,21 @@ const readline = require('readline');
 
 const argv = process.argv.slice(2)
 const getargvInfo = () => {
-const URL = argv[0].startsWith('http') ? argv[0] : null
-const txtFile = argv.indexOf('--txt') > 0 : argv.indexOf('--txt') + 1 : null
-const type = argv.includes('--username') ? 'Mass Download (Username)' : argv.includes('--txt') ? 'Mass Download with (txt)' : argv.includes('--single')? 'Single Download (URL)' : 'Single Download (URL)'
-const watermark = argv.includes('--no-watermark') ? 'Without Watermark':'With Watermark'
-return {
-choice:type,
-URL,
-type:watermark,
-useArgv: type && watermark && (URL || txtFile)
-}
+    if(!argv[0]) return { useArgv: false };
+    const URL = argv[0].startsWith('http') ? argv[0] : null;
+    const txtFile = argv.indexOf('--txt') >= 0 ? argv[argv.indexOf('--txt') + 1] : null;
+    const username = argv.indexOf('--username') >= 0 ? argv[argv.indexOf('--username') + 1] : null;
+    const type = argv.includes('--username') ? 'Mass Download (Username)' : argv.includes('--txt') ? 'Mass Download with (txt)' : argv.includes('--single')? 'Single Download (URL)' : 'Single Download (URL)';
+    const watermark = argv.includes('--no-watermark') ? 'Without Watermark' : 'With Watermark';
+    // console.log(watermark, type, URL, txtFile,  argv[argv.indexOf('--txt') + 1])
+    return {
+        choice: type,
+        url: URL,
+        type: watermark,
+        file: txtFile,
+        username: username,
+        useArgv: type && watermark && (URL || txtFile)
+    };
 }
 //adding useragent to avoid ip bans
 const headers = new Headers();
@@ -237,11 +242,11 @@ let choice = null;
 if(!argvInfo.useArgv){
      choice = await getChoice();
 } else {
-choice = argvInfo()
+choice = argvInfo
 }
     var listVideo = [];
     if (choice.choice === "Mass Download (Username)") {
-        const usernameInput = argvInfo.username || await getInput("Enter the username with @ (e.g. @username) : ").then(e=>e.input);
+        const usernameInput = choice.username || await getInput("Enter the username with @ (e.g. @username) : ").then(e=>e.input);
         const username = usernameInput;
         listVideo = await getListVideoByUsername(username);
         if(listVideo.length === 0) {
@@ -251,7 +256,7 @@ choice = argvInfo()
     } else if (choice.choice === "Mass Download with (txt)") {
         var urls = [];
         // Get URL from file
-        const fileInput = argv.file || await getInput("Enter the file path : ").then(e=>e.input);
+        const fileInput = choice.file || await getInput("Enter the file path : ").then(e=>e.input);
         const file = fileInput;
 
         if(!fs.existsSync(file)) {
@@ -280,8 +285,8 @@ choice = argvInfo()
             listVideo.push(url);
         }
     } else {
-        const urlInput = await getInput("Enter the URL : ");
-        const url = await getRedirectUrl(urlInput.input);
+        const urlInput = choice.url ||await getInput("Enter the URL : ").then(r=>r.input);
+        const url = await getRedirectUrl(urlInput);
         listVideo.push(url);
     }
 
