@@ -283,7 +283,7 @@ const getIdVideo = (url) => {
 
 const loadCookie = async (page) => {
     //could be useful in future so ill keep it
-    const cookieJson = await fs.readFileSync('cookies2.json');
+    const cookieJson = await fs.readFileSync('cookies.json');
     const cookies = JSON.parse(cookieJson);
     await page.setCookie(...cookies);
 }
