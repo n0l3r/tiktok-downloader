@@ -1,2 +1,8 @@
 node_modules/
 downloads/*
+crash_logs/*
+cookies.json
+index_old.js
+async_Test.js
+TikTokDownloader.db
+xpath.txt

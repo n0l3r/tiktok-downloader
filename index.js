@@ -5,50 +5,62 @@
 
 const fetch = require("node-fetch");
 const chalk = require("chalk");
-const inquirer = require("inquirer");
 const fs = require("fs");
 const puppeteer = require("puppeteer");
 const { exit } = require("process");
-const { resolve } = require("path");
+const { resolve, parse } = require("path");
 const { reject } = require("lodash");
 const {Headers} = require('node-fetch');
+const {ArgumentParser} = require('argparse');
 const readline = require('readline');
+const moment = require('moment')
+
+// const { EOF } = require("dns");
+
+
+
+
+const parser = new ArgumentParser({
+    description: 'Node.js TikTok Downloader'
+  });
+
+parser.add_argument('-w', {action:'store_true',help:'Downloads Videos With Watermark'});
+// -t txtfile -u url -m username  -w watermark included
+group=parser.add_mutually_exclusive_group({required:true})
+
+group.add_argument('-t', '--txt', { help: 'Download All Video URL\'s In A Text File' });
+group.add_argument('-m', '--mass', { help: 'Mass Download Via Username eg.(@catpippi)' });
+group.add_argument('-u','--url',{ help: 'Tiktok Url eg. (https://www.tiktok.com/@catpippi/video/7310806096568945962)' });
 
 
 //adding useragent to avoid ip bans
+
 const headers = new Headers();
 headers.append('User-Agent', 'TikTok 26.2.0 rv:262018 (iPhone; iOS 14.4.2; en_US) Cronet');
 
-const getChoice = () => new Promise((resolve, reject) => {
-    inquirer.prompt([
-        {
-            type: "list",
-            name: "choice",
-            message: "Choose a option",
-            choices: ["Mass Download (Username)", "Mass Download with (txt)", "Single Download (URL)"]
-        },
-        {
-            type: "list",
-            name: "type",
-            message: "Choose a option",
-            choices: ["With Watermark", "Without Watermark"]
-        }
-    ])
-    .then(res => resolve(res))
-    .catch(err => reject(err));
-});
 
-const getInput = (message) => new Promise((resolve, reject) => {
-    inquirer.prompt([
-        {
-            type: "input",
-            name: "input",
-            message: message
-        }
-    ])
-    .then(res => resolve(res))
-    .catch(err => reject(err));
-});
+const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+
+async function writeLog(error_name,page,browser,error=undefined){
+    const crash_log_path=`crash_logs/${moment().format('YYYY-MM-DD_hh-mm-ss.SSS')}_${error_name}`
+    fs.mkdirSync(crash_log_path)
+    if(error){
+        fs.writeFile(`${crash_log_path}/crash.txt`, error.toString(), err => {
+            if (err) {
+            console.error(err);
+            }
+        });
+    }
+
+    await page.screenshot({
+    "type": "png",
+    "path": `${crash_log_path}/screenshot.png`,  
+    "fullPage": true,  
+    });
+    
+}
+
 
 const generateUrlProfile = (username) => {
     var baseUrl = "https://www.tiktok.com/";
@@ -60,15 +72,18 @@ const generateUrlProfile = (username) => {
     return baseUrl;
 };
 
-const downloadMedia = async (item) => {
-    const folder = "downloads/";
-
+const downloadMedia = async (item,username) => {
+    const folder = `downloads/${username[0]}/`;
+    if(!fs.existsSync(folder)){
+        fs.mkdirSync(folder)
+    }
+    
     // check for slideshow
     if (item.images.length != 0) {
         console.log(chalk.green("[*] Downloading Sildeshow"));
 
         let index = 0;
-        item.images.forEach(image_url => {
+        await item.images.forEach(image_url => {
             const fileName = `${item.id}_${index}.jpeg`;
             // check if file was already downloaded
             if (fs.existsSync(folder + fileName)) {
@@ -161,17 +176,57 @@ const getVideo = async (url, watermark) => {
 
 const getListVideoByUsername = async (username) => {
     var baseUrl = await generateUrlProfile(username)
+  
     const browser = await puppeteer.launch({
         headless: false,
     })
     const page = await browser.newPage()
+    await loadCookie(page);
     page.setUserAgent(
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/85.0.4182.0 Safari/537.36"
       );
     await page.goto(baseUrl)
+
+    const delay_milliseconds=1250
+    const num_refreshes=3
+    
+    //this loop refreshes the page num_refreshes times whilst trying to click a refresh button
+    // after the refresh button dissapears the code with throw an error leading into the catch block meaning that it has loaded
+    // the catch block will check if refresh button has dissapeared using truthy/fasly boolean checking
+    // if the element is still there it means a true crash happened and a log needs to be created
+    for(var i=0;i<num_refreshes;i++){
+
+        try {
+            await page.reload()
+            await sleep(delay_milliseconds)
+        
+            const xpathSelector = "//button[contains(text(),'Refresh')]"; // Replace with your XPath
+            await page.evaluate(xpath => {
+                const xpathResult = document.evaluate(xpath, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null);
+                const element = xpathResult.singleNodeValue;
+                if (element) {
+                    element.click()
+                }
+            }, xpathSelector);
+        
+        } 
+
+        catch (error) {
+                //the writelog code was here until I broke it down into a function
+                await writeLog("element_error",page,browser,error)
+                await browser.close()
+                break;
+            
+        }
+    }
+    
+
+
+
     var listVideo = []
     console.log(chalk.green("[*] Getting list video from: " + username))
     var loop = true
+    var no_video_found=false
     while(loop) {
         listVideo = await page.evaluate(() => {
            const listVideo = document.querySelectorAll('a');
@@ -188,8 +243,17 @@ return videoUrls2;
             console.log(chalk.red("[X] No more video found"));
             console.log(chalk.green(`[*] Total video found: ${listVideo.length}`))
             loop = false
+            if(listVideo.length===0){
+                no_video_found=true
+            }
+            
+            
         });
         await new Promise((resolve) => setTimeout(resolve, 1000));
+    } 
+
+    if(no_video_found){
+        await writeLog("no_video_found",page,browser)
     }
     await browser.close()
     return listVideo
@@ -217,24 +281,46 @@ const getIdVideo = (url) => {
     return (idVideo.length > 19) ? idVideo.substring(0, idVideo.indexOf("?")) : idVideo;
 }
 
+const loadCookie = async (page) => {
+    //could be useful in future so ill keep it
+    const cookieJson = await fs.readFileSync('cookies2.json');
+    const cookies = JSON.parse(cookieJson);
+    await page.setCookie(...cookies);
+}
+
+
+
+
 (async () => {    
-    const header = "\r\n \/$$$$$$$$ \/$$$$$$ \/$$   \/$$ \/$$$$$$$$ \/$$$$$$  \/$$   \/$$       \/$$$$$$$   \/$$$$$$  \/$$      \/$$ \/$$   \/$$ \/$$        \/$$$$$$   \/$$$$$$  \/$$$$$$$  \/$$$$$$$$ \/$$$$$$$ \r\n|__  $$__\/|_  $$_\/| $$  \/$$\/|__  $$__\/\/$$__  $$| $$  \/$$\/      | $$__  $$ \/$$__  $$| $$  \/$ | $$| $$$ | $$| $$       \/$$__  $$ \/$$__  $$| $$__  $$| $$_____\/| $$__  $$\r\n   | $$     | $$  | $$ \/$$\/    | $$  | $$  \\ $$| $$ \/$$\/       | $$  \\ $$| $$  \\ $$| $$ \/$$$| $$| $$$$| $$| $$      | $$  \\ $$| $$  \\ $$| $$  \\ $$| $$      | $$  \\ $$\r\n   | $$     | $$  | $$$$$\/     | $$  | $$  | $$| $$$$$\/        | $$  | $$| $$  | $$| $$\/$$ $$ $$| $$ $$ $$| $$      | $$  | $$| $$$$$$$$| $$  | $$| $$$$$   | $$$$$$$\/\r\n   | $$     | $$  | $$  $$     | $$  | $$  | $$| $$  $$        | $$  | $$| $$  | $$| $$$$_  $$$$| $$  $$$$| $$      | $$  | $$| $$__  $$| $$  | $$| $$__\/   | $$__  $$\r\n   | $$     | $$  | $$\\  $$    | $$  | $$  | $$| $$\\  $$       | $$  | $$| $$  | $$| $$$\/ \\  $$$| $$\\  $$$| $$      | $$  | $$| $$  | $$| $$  | $$| $$      | $$  \\ $$\r\n   | $$    \/$$$$$$| $$ \\  $$   | $$  |  $$$$$$\/| $$ \\  $$      | $$$$$$$\/|  $$$$$$\/| $$\/   \\  $$| $$ \\  $$| $$$$$$$$|  $$$$$$\/| $$  | $$| $$$$$$$\/| $$$$$$$$| $$  | $$\r\n   |__\/   |______\/|__\/  \\__\/   |__\/   \\______\/ |__\/  \\__\/      |_______\/  \\______\/ |__\/     \\__\/|__\/  \\__\/|________\/ \\______\/ |__\/  |__\/|_______\/ |________\/|__\/  |__\/\r\n\n by n0l3r (https://github.com/n0l3r)\n"
-    console.log(chalk.blue(header))
-    const choice = await getChoice();
+    // let results=await writeVideoAndReadVideosFromDB('daniellarsonwork24','https://www.tiktok.com/@daniellarsonwork24/video/99921218319966153571536174')
+    // console.log(results)
+    // exit()
+    if(!fs.existsSync('downloads')){
+        fs.mkdirSync('downloads')
+    }
+    if(!fs.existsSync('crash_logs')){
+        fs.mkdirSync('crash_logs')
+    }
+
+    const args =parser.parse_args()
+
+    // const choice = await getChoice();
     var listVideo = [];
-    if (choice.choice === "Mass Download (Username)") {
-        const usernameInput = await getInput("Enter the username with @ (e.g. @username) : ");
-        const username = usernameInput.input;
+    //choice.choice === "Mass Download (Username)"
+    if (args.mass) {
+        // const usernameInput = await getInput("Enter the username with @ (e.g. @username) : ");
+        
+        const username = args.mass
         listVideo = await getListVideoByUsername(username);
         if(listVideo.length === 0) {
             console.log(chalk.yellow("[!] Error: No video found"));
             exit();
         }
-    } else if (choice.choice === "Mass Download with (txt)") {
+    } else if (args.txt) {
         var urls = [];
         // Get URL from file
-        const fileInput = await getInput("Enter the file path : ");
-        const file = fileInput.input;
+        // const fileInput = await getInput("Enter the file path : ");
+        const file = args.txt;
 
         if(!fs.existsSync(file)) {
             console.log(chalk.red("[X] Error: File not found"));
@@ -262,33 +348,43 @@ const getIdVideo = (url) => {
             listVideo.push(url);
         }
     } else {
-        const urlInput = await getInput("Enter the URL : ");
-        const url = await getRedirectUrl(urlInput.input);
+        // const urlInput = await getInput("Enter the URL : ");
+        //                  await getRedirectUrl(urlInput.input);
+        const url = args.url
         listVideo.push(url);
     }
 
     console.log(chalk.green(`[!] Found ${listVideo.length} video`));
 
     let deleted_videos_count = 0;
+
+
     for(var i = 0; i < listVideo.length; i++){
+    
         console.log(chalk.green(`[*] Downloading video ${i+1} of ${listVideo.length}`));
         console.log(chalk.green(`[*] URL: ${listVideo[i]}`));
-        var data = await getVideo(listVideo[i], (choice.type == "With Watermark"));
-
+        // choice.type == "With Watermark"
+        var data = await getVideo(listVideo[i], (args.w));
+     
         // check if video was deleted => data empty
         if (data == null) {
             console.log(chalk.yellow(`[!] Video ${i+1} was deleted!`));
             deleted_videos_count++;
             continue;
         }
+        // This regex extracts usernames for folder naming and skipping
+        const username=listVideo[i].match(/@([^\/]+)/)
+        
+       
 
-        downloadMedia(data).then(() => {
+        await downloadMedia(data,username).then(() => {
             console.log(chalk.green("[+] Downloaded successfully"));
         })
         .catch(err => {
             console.log(chalk.red("[X] Error: " + err));
         });
     }
-
     console.log(chalk.yellow(`[!] ${deleted_videos_count} of ${listVideo.length} videos were deleted!`));
+    
+    // await login("james","123123123",undefined)
 })();
