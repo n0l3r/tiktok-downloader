@@ -1,9 +1,7 @@
 <h1 style="align: center;">Tiktok Downloader</h1>
 
 <h1>Changes From Original Branch</h1>
-I added command line arguments
-I added a way to load cookies to sign in
-I also made the mass download work again but its subject to breaking
+I added command line arguments, added a way to load cookies to sign in and finally made the mass download work again but its subject to breaking due to element changes
 
 <h2>Installation</h2>
 run in your terminal:
