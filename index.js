@@ -187,7 +187,7 @@ const getListVideoByUsername = async (username,snipe) => {
     var baseUrl = await generateUrlProfile(username)
   
     const browser = await puppeteer.launch({
-        headless: false,
+        headless: true,
     })
     
     const page = await browser.newPage()
