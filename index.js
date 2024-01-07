@@ -90,10 +90,9 @@ const downloadMedia = async (item,username,skip) => {
             // check if file was already downloaded
             if (fs.existsSync(folder + fileName)) {
                 if(skip){
+                    console.log(chalk.yellow(`[!] File '${fileName}' already exists. Skipping`));
                     exit()
                 }
-
-                console.log(chalk.yellow(`[!] File '${fileName}' already exists. Skipping`));
                 return;
             }
             index++;
@@ -115,7 +114,10 @@ const downloadMedia = async (item,username,skip) => {
         const fileName = `${item.id}.mp4`;
         // check if file was already downloaded
         if (fs.existsSync(folder + fileName)) {
-            console.log(chalk.yellow(`[!] File '${fileName}' already exists. Skipping`));
+            if(skip){
+                console.log(chalk.yellow(`[!] File '${fileName}' already exists. Skipping`));
+                exit()
+            }
             return;
         }
         const downloadFile = fetch(item.url);
@@ -181,49 +183,63 @@ const getVideo = async (url, watermark) => {
 }
 
 const getListVideoByUsername = async (username,snipe) => {
+    let start_time=performance.now()
     var baseUrl = await generateUrlProfile(username)
   
     const browser = await puppeteer.launch({
         headless: false,
     })
+    
     const page = await browser.newPage()
+    // Time without image blocking Time elapsed is          101881.39950000122 101.88 seconds
+    // Time with image blocking Time elapsed is             100231.26790000126 101.231 seconds
+    // Time with image,css & font blocking Time elapsed is  103028.19510000199
+
+    // || request.resourceType() === 'stylesheet' || request.resourceType()=='font'
+    await page.setRequestInterception(true)
+    page.on('request', (request) => {
+    if (request.resourceType() === 'image') request.abort()
+    else request.continue()
+    })
+
     await loadCookie(page);
     page.setUserAgent(
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/85.0.4182.0 Safari/537.36"
       );
     await page.goto(baseUrl)
 
-    const delay_milliseconds=1250
-    const num_refreshes=3
+    const delay_milliseconds=2500
+    const delay_after_load=1000
+    const num_refreshes=10
     
     //this loop refreshes the page num_refreshes times whilst trying to click a refresh button
     // after the refresh button dissapears the code with throw an error leading into the catch block meaning that it has loaded
     // the catch block will check if refresh button has dissapeared using truthy/fasly boolean checking
     // if the element is still there it means a true crash happened and a log needs to be created
-    for(var i=0;i<num_refreshes;i++){
+    
+ 
+    // I made the code wait to load instead of constantly refreshing should save me some money!
+    try {
+        // await page.reload()
+        await sleep(delay_milliseconds)
+    
+        const xpathSelector = "//button[contains(text(),'Refresh')]"; // Replace with your XPath
+        await page.evaluate(xpath => {
+            const xpathResult = document.evaluate(xpath, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null);
+            const element = xpathResult.singleNodeValue;
+            if (element) {
+                element.click()
+            }
+        }, xpathSelector);
 
-        try {
-            await page.reload()
-            await sleep(delay_milliseconds)
-        
-            const xpathSelector = "//button[contains(text(),'Refresh')]"; // Replace with your XPath
-            await page.evaluate(xpath => {
-                const xpathResult = document.evaluate(xpath, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null);
-                const element = xpathResult.singleNodeValue;
-                if (element) {
-                    element.click()
-                }
-            }, xpathSelector);
-        
-        } 
+        await sleep(delay_after_load)
+    } 
 
-        catch (error) {
-                //the writelog code was here until I broke it down into a function
-                await writeLog("element_error",page,browser,error)
-                await browser.close()
-                break;
-            
-        }
+    catch (error) {
+            //the writelog code was here until I broke it down into a function
+            await writeLog("element_error",page,browser,error)
+            await browser.close()
+        
     }
     
 
@@ -254,7 +270,7 @@ return videoUrls2;
         console.log(chalk.green(`[*] ${listVideo.length} video found`))
         previousHeight = await page.evaluate("document.body.scrollHeight");
         await page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
-                                                                                                    
+        // I may be able to consider a faster timeout due to images beings disabled                           
         await page.waitForFunction(`document.body.scrollHeight > ${previousHeight}`, {timeout: 10000})
         .catch(() => {
             console.log(chalk.red("[X] No more video found"));
@@ -273,6 +289,7 @@ return videoUrls2;
         await writeLog("no_video_found",page,browser)
     }
     await browser.close()
+    console.log("Time elapsed is",performance.now()-start_time)
     return listVideo
 }
 const getRedirectUrl = async (url) => {
