@@ -25,10 +25,11 @@ const parser = new ArgumentParser({
   });
 
 parser.add_argument('-w', {action:'store_true',help:'Downloads Videos With Watermark'});
+parser.add_argument('-s', {action:'store_true',help:'Only does a single iteration of link-gathering'});
 // -t txtfile -u url -m username  -w watermark included
 group=parser.add_mutually_exclusive_group({required:true})
 
-group.add_argument('-t', '--txt', { help: 'Download All Video URL\'s In A Text File' });
+group.add_argument('-f', '--txt', { help: 'Download All Video URL\'s In A Text File' });
 group.add_argument('-m', '--mass', { help: 'Mass Download Via Username eg.(@catpippi)' });
 group.add_argument('-u','--url',{ help: 'Tiktok Url eg. (https://www.tiktok.com/@catpippi/video/7310806096568945962)' });
 
@@ -174,11 +175,11 @@ const getVideo = async (url, watermark) => {
     return data;
 }
 
-const getListVideoByUsername = async (username) => {
+const getListVideoByUsername = async (username,snipe) => {
     var baseUrl = await generateUrlProfile(username)
   
     const browser = await puppeteer.launch({
-        headless: false,
+        headless: true,
     })
     const page = await browser.newPage()
     await loadCookie(page);
@@ -227,17 +228,28 @@ const getListVideoByUsername = async (username) => {
     console.log(chalk.green("[*] Getting list video from: " + username))
     var loop = true
     var no_video_found=false
+   
     while(loop) {
         listVideo = await page.evaluate(() => {
-           const listVideo = document.querySelectorAll('a');
-const videoUrls2 = Array.from(listVideo).map(item => item.href)
-  .filter(href => href.includes('/video/'))
-  .filter((value, index, self) => self.indexOf(value) === index);
+        const listVideo = document.querySelectorAll('a');
+    
+        const videoUrls2 = Array.from(listVideo).map(item => item.href)
+            .filter(href => href.includes('/video/') || href.includes('/photo/'))
+            .filter((value, index, self) => self.indexOf(value) === index).map(item=>item.replace('photo','video'));
+        // https://www.tiktok.com/@daniellarsonwork24/photo/7320008509586738478
+        // const slideShowUrls2 = Array.from(listVideo).map(item => item.href)
+        //     .filter(href => href.includes('/photo/'))
+        //     .filter((value, index, self) => self.indexOf(value) === index).map(item=>item.replace('photo','video'));
+//return videoUrls2.concat(slideShowUrls2);
 return videoUrls2;
         });
+        if(snipe){
+            loop=false
+        }
         console.log(chalk.green(`[*] ${listVideo.length} video found`))
         previousHeight = await page.evaluate("document.body.scrollHeight");
         await page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+                                                                                                    
         await page.waitForFunction(`document.body.scrollHeight > ${previousHeight}`, {timeout: 10000})
         .catch(() => {
             console.log(chalk.red("[X] No more video found"));
@@ -283,7 +295,7 @@ const getIdVideo = (url) => {
 
 const loadCookie = async (page) => {
     //could be useful in future so ill keep it
-    const cookieJson = await fs.readFileSync('cookies2.json');
+    const cookieJson = await fs.readFileSync('cookies.json');
     const cookies = JSON.parse(cookieJson);
     await page.setCookie(...cookies);
 }
@@ -303,7 +315,7 @@ const loadCookie = async (page) => {
     }
 
     const args =parser.parse_args()
-
+    
     // const choice = await getChoice();
     var listVideo = [];
     //choice.choice === "Mass Download (Username)"
@@ -311,7 +323,7 @@ const loadCookie = async (page) => {
         // const usernameInput = await getInput("Enter the username with @ (e.g. @username) : ");
         
         const username = args.mass
-        listVideo = await getListVideoByUsername(username);
+        listVideo = await getListVideoByUsername(username,args.s);
         if(listVideo.length === 0) {
             console.log(chalk.yellow("[!] Error: No video found"));
             exit();
