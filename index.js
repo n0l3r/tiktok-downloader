@@ -26,6 +26,7 @@ const parser = new ArgumentParser({
 
 parser.add_argument('-w', {action:'store_true',help:'Downloads Videos With Watermark'});
 parser.add_argument('-s', {action:'store_true',help:'Only does a single iteration of link-gathering'});
+parser.add_argument('-k', {action:'store_true',help:'On duplicate video exit downloader'});
 // -t txtfile -u url -m username  -w watermark included
 group=parser.add_mutually_exclusive_group({required:true})
 
@@ -73,7 +74,7 @@ const generateUrlProfile = (username) => {
     return baseUrl;
 };
 
-const downloadMedia = async (item,username) => {
+const downloadMedia = async (item,username,skip) => {
     const folder = `downloads/${username[0]}/`;
     if(!fs.existsSync(folder)){
         fs.mkdirSync(folder)
@@ -88,6 +89,10 @@ const downloadMedia = async (item,username) => {
             const fileName = `${item.id}_${index}.jpeg`;
             // check if file was already downloaded
             if (fs.existsSync(folder + fileName)) {
+                if(skip){
+                    exit()
+                }
+
                 console.log(chalk.yellow(`[!] File '${fileName}' already exists. Skipping`));
                 return;
             }
@@ -179,7 +184,7 @@ const getListVideoByUsername = async (username,snipe) => {
     var baseUrl = await generateUrlProfile(username)
   
     const browser = await puppeteer.launch({
-        headless: true,
+        headless: false,
     })
     const page = await browser.newPage()
     await loadCookie(page);
@@ -389,7 +394,7 @@ const loadCookie = async (page) => {
         
        
 
-        await downloadMedia(data,username).then(() => {
+        await downloadMedia(data,username,args.k).then(() => {
             console.log(chalk.green("[+] Downloaded successfully"));
         })
         .catch(err => {
