@@ -183,7 +183,7 @@ const getVideo = async (url, watermark) => {
 }
 
 const getListVideoByUsername = async (username,snipe) => {
-    let start_time=performance.now()
+  
     var baseUrl = await generateUrlProfile(username)
   
     const browser = await puppeteer.launch({
@@ -289,7 +289,7 @@ return videoUrls2;
         await writeLog("no_video_found",page,browser)
     }
     await browser.close()
-    console.log("Time elapsed is",performance.now()-start_time)
+
     return listVideo
 }
 const getRedirectUrl = async (url) => {
