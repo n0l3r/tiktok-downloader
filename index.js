@@ -209,7 +209,7 @@ const getListVideoByUsername = async (username,snipe) => {
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/85.0.4182.0 Safari/537.36"
       );
     await page.goto(baseUrl).catch(err =>{
-         console.error(e)
+         console.error(err)
          exit();
     });
 
