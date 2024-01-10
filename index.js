@@ -9,6 +9,7 @@ const fs = require("fs");
 const puppeteer = require("puppeteer");
 const { exit } = require("process");
 const { resolve, parse } = require("path");
+const path = require("path");
 const { reject } = require("lodash");
 const {Headers} = require('node-fetch');
 const {ArgumentParser} = require('argparse');
@@ -45,7 +46,7 @@ const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 
 async function writeLog(error_name,page,browser,error=undefined){
-    const crash_log_path=`crash_logs/${moment().format('YYYY-MM-DD_hh-mm-ss.SSS')}_${error_name}`
+    const crash_log_path=path.join(__dirname,`crash_logs/${moment().format('YYYY-MM-DD_hh-mm-ss.SSS')}_${error_name}`)
     fs.mkdirSync(crash_log_path)
     if(error){
         fs.writeFile(`${crash_log_path}/crash.txt`, error.toString(), err => {
@@ -75,7 +76,7 @@ const generateUrlProfile = (username) => {
 };
 
 const downloadMedia = async (item,username,skip) => {
-    const folder = `downloads/${username[0]}/`;
+    const folder =path.join(__dirname,`downloads/${username[0]}/`);
     if(!fs.existsSync(folder)){
         fs.mkdirSync(folder)
     }
@@ -183,7 +184,7 @@ const getVideo = async (url, watermark) => {
 }
 
 const getListVideoByUsername = async (username,snipe) => {
-  
+
     var baseUrl = await generateUrlProfile(username)
   
     const browser = await puppeteer.launch({
@@ -206,7 +207,10 @@ const getListVideoByUsername = async (username,snipe) => {
     page.setUserAgent(
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/85.0.4182.0 Safari/537.36"
       );
-    await page.goto(baseUrl)
+    await page.goto(baseUrl).catch(err =>{
+         console.error(err)
+         exit();
+    });
 
     const delay_milliseconds=2500
     const delay_after_load=1000
@@ -289,7 +293,6 @@ return videoUrls2;
         await writeLog("no_video_found",page,browser)
     }
     await browser.close()
-
     return listVideo
 }
 const getRedirectUrl = async (url) => {
@@ -317,7 +320,7 @@ const getIdVideo = (url) => {
 
 const loadCookie = async (page) => {
     //could be useful in future so ill keep it
-    const cookieJson = await fs.readFileSync('cookies.json');
+    const cookieJson = await fs.readFileSync(path.join(__dirname,'cookies.json'));
     const cookies = JSON.parse(cookieJson);
     await page.setCookie(...cookies);
 }
@@ -329,11 +332,11 @@ const loadCookie = async (page) => {
     // let results=await writeVideoAndReadVideosFromDB('daniellarsonwork24','https://www.tiktok.com/@daniellarsonwork24/video/99921218319966153571536174')
     // console.log(results)
     // exit()
-    if(!fs.existsSync('downloads')){
-        fs.mkdirSync('downloads')
+    if(!fs.existsSync(path.join(__dirname,'downloads'))){
+        fs.mkdirSync(path.join(__dirname,'downloads'))
     }
-    if(!fs.existsSync('crash_logs')){
-        fs.mkdirSync('crash_logs')
+    if(!fs.existsSync(path.join(__dirname,'crash_logs'))){
+        fs.mkdirSync(path.join(__dirname,'crash_logs'))
     }
 
     const args =parser.parse_args()
@@ -356,7 +359,7 @@ const loadCookie = async (page) => {
         // const fileInput = await getInput("Enter the file path : ");
         const file = args.txt;
 
-        if(!fs.existsSync(file)) {
+        if(!fs.existsSync(path.join(__dirname,'crash_logs',file))) {
             console.log(chalk.red("[X] Error: File not found"));
             exit();
         }
