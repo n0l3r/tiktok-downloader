@@ -27,7 +27,8 @@ const parser = new ArgumentParser({
 
 parser.add_argument('-w', {action:'store_true',help:'Downloads Videos With Watermark'});
 parser.add_argument('-s', {action:'store_true',help:'Only does a single iteration of link-gathering'});
-parser.add_argument('-k', {action:'store_true',help:'On duplicate video exit downloader'});
+parser.add_argument('--amount', {help:'Specify number of videos to download',type:'int'});
+
 // -t txtfile -u url -m username  -w watermark included
 group=parser.add_mutually_exclusive_group({required:true})
 
@@ -77,6 +78,7 @@ const generateUrlProfile = (username) => {
 
 const downloadMedia = async (item,username,skip) => {
     const folder =path.join(__dirname,`downloads/${username[0]}/`);
+
     if(!fs.existsSync(folder)){
         fs.mkdirSync(folder)
     }
@@ -84,7 +86,6 @@ const downloadMedia = async (item,username,skip) => {
     // check for slideshow
     if (item.images.length != 0) {
         console.log(chalk.green("[*] Downloading Sildeshow"));
-
         let index = 0;
         await item.images.forEach(image_url => {
             const fileName = `${item.id}_${index}.jpeg`;
@@ -396,7 +397,7 @@ const loadCookie = async (page) => {
     let deleted_videos_count = 0;
 
 
-    for(var i = 0; i < listVideo.length; i++){
+    for(var i = 0; i < (args.amount?args.amount:listVideo.length); i++){
     
         console.log(chalk.green(`[*] Downloading video ${i+1} of ${listVideo.length}`));
         console.log(chalk.green(`[*] URL: ${listVideo[i]}`));
