@@ -1,7 +1,8 @@
 <h1 style="align: center;">Tiktok Downloader</h1>
 
 <h1>Changes From Original Branch</h1>
-I added command line arguments, added a way to load cookies to sign in and finally made the mass download work again but its subject to breaking due to element changes
+I added command line arguments, added a way to load cookies to sign in and finally made the mass download work again but its subject to breaking due to element changes.
+
 
 <h2>Installation</h2>
 run in your terminal:
@@ -10,7 +11,7 @@ run in your terminal:
 git clone https://github.com/n0l3r/tiktok-downloader.git
 cd tiktok-downloader
 npm i
-node index [-h] [-w] (-t TXT | -m MASS | -u URL)
+usage: index.js [-h] [-w] [-s] [--amount AMOUNT] (-f TXT | -m MASS | -u URL)
 ```
 
 <h2>Saving Your Cookies (Important!)</h2>
