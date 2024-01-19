@@ -212,7 +212,7 @@ const getListVideoByUsername = async (username,snipe) => {
          console.error(err)
          exit();
     });
-
+  
     const delay_milliseconds=2500
     const delay_after_load=1000
     const num_refreshes=10
@@ -249,7 +249,7 @@ const getListVideoByUsername = async (username,snipe) => {
     
 
 
-
+    await page.keyboard.press('Escape')
     var listVideo = []
     console.log(chalk.green("[*] Getting list video from: " + username))
     var loop = true
@@ -274,7 +274,9 @@ return videoUrls2;
         }
         console.log(chalk.green(`[*] ${listVideo.length} video found`))
         previousHeight = await page.evaluate("document.body.scrollHeight");
-        await page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+        await page.evaluate("window.scrollTo(0, document.body.scrollHeight)").catch(() => {
+            // Just catching the error
+        })
         // I may be able to consider a faster timeout due to images beings disabled                           
         await page.waitForFunction(`document.body.scrollHeight > ${previousHeight}`, {timeout: 10000})
         .catch(() => {
