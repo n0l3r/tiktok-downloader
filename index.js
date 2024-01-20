@@ -14,6 +14,8 @@ const { reject } = require("lodash");
 const {Headers} = require('node-fetch');
 const readline = require('readline');
 
+//load inq module
+inquirer.registerPrompt('fuzzypath', require('inquirer-fuzzy-path'))
 
 //adding useragent to avoid ip bans
 const headers = new Headers();
@@ -62,7 +64,7 @@ const generateUrlProfile = (username) => {
 
 const downloadMedia = async (item) => {
     const folder = "downloads/";
-
+    if (!fs.existsSync(folder)) fs.mkdirSync(folder, {recrusive:true})
     // check for slideshow
     if (item.images.length != 0) {
         console.log(chalk.green("[*] Downloading Sildeshow"));
@@ -206,7 +208,14 @@ const getRedirectUrl = async (url) => {
     return url;
 }
 
-const getIdVideo = (url) => {
+const getIdVideo = async (url) => {
+    if(url.includes('/t/')) {
+        url = await new Promise((resolve) => {
+            require('follow-redirects').https.get(url, function(res) {
+                return resolve(res.responseUrl)
+            });
+        })
+    }
     const matching = url.includes("/video/")
     if(!matching){
         console.log(chalk.red("[X] Error: URL not found"));
@@ -233,7 +242,42 @@ const getIdVideo = (url) => {
     } else if (choice.choice === "Mass Download with (txt)") {
         var urls = [];
         // Get URL from file
-        const fileInput = await getInput("Enter the file path : ");
+        const fileInput =   await inquirer.prompt([
+            {
+              type: 'fuzzypath',
+              name: 'input',
+              excludePath: nodePath => {
+                return nodePath.includes('node_modules') || nodePath.includes('.git')
+            },
+                // excludePath :: (String) -> Bool
+                // excludePath to exclude some paths from the file-system scan
+              excludeFilter: nodePath => {
+                  if(nodePath.includes('.txt'))  console.log(nodePath)
+                    return !nodePath.endsWith('.txt')
+                },
+                // excludeFilter :: (String) -> Bool
+                // excludeFilter to exclude some paths from the final list, e.g. '.'
+              itemType: 'file',
+                // itemType :: 'any' | 'directory' | 'file'
+                // specify the type of nodes to display
+                // default value: 'any'
+                // example: itemType: 'file' - hides directories from the item list
+              rootPath: __dirname,
+                // rootPath :: String
+                // Root search directory
+              message: 'Select a target directory for your component:',
+              default: 'list.txt',
+              suggestOnly: false,
+                // suggestOnly :: Bool
+                // Restrict prompt answer to available choices or use them as suggestions
+              depthLimit: 5,
+                // depthLimit :: integer >= 0
+                // Limit the depth of sub-folders to scan
+                // Defaults to infinite depth if undefined
+            }
+          ]);
+        
+        // await getInput("Enter the file path : ");
         const file = fileInput.input;
 
         if(!fs.existsSync(file)) {
@@ -290,5 +334,7 @@ const getIdVideo = (url) => {
         });
     }
 
-    console.log(chalk.yellow(`[!] ${deleted_videos_count} of ${listVideo.length} videos were deleted!`));
+    if(deleted_videos_count > 0) {
+        console.log(chalk.yellow(`[!] ${deleted_videos_count} of ${listVideo.length} videos were deleted!`));
+    }
 })();
