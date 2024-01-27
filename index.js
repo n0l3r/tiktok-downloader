@@ -61,6 +61,8 @@ async function writeLog(error_name,page,browser,error=undefined){
     "type": "png",
     "path": `${crash_log_path}/screenshot.png`,  
     "fullPage": true,  
+    }).catch(() => {
+        
     });
     
 }
@@ -99,15 +101,23 @@ const downloadMedia = async (item,username,skip) => {
             }
             index++;
             const downloadFile = fetch(image_url);
-            const file = fs.createWriteStream(folder + fileName);
             
-            downloadFile.then(res => {
-                res.body.pipe(file)
-                file.on("finish", () => {
-                    file.close()
-                    resolve()
-                });
-                file.on("error", (err) => reject(err));
+            downloadFile.then((res) => {
+                
+                if(res.status==404){
+
+                    console.log(chalk.yellow(`[!] File '${fileName}' is corrupted open download or doesnt exist (404)`))
+        
+                }
+                else{
+                    const file = fs.createWriteStream(folder + fileName);
+                    res.body.pipe(file)
+                    file.on("finish", () => {
+                        file.close()
+                        resolve()
+                    });
+                    file.on("error", (err) => reject(err));
+                }
             });
         });
 
@@ -212,8 +222,8 @@ const getListVideoByUsername = async (username,snipe) => {
          console.error(err)
          exit();
     });
-  
-    const delay_milliseconds=2500
+    await page.keyboard.press('Escape')
+    const delay_milliseconds=3000
     const delay_after_load=1000
     const num_refreshes=10
     
@@ -222,7 +232,7 @@ const getListVideoByUsername = async (username,snipe) => {
     // the catch block will check if refresh button has dissapeared using truthy/fasly boolean checking
     // if the element is still there it means a true crash happened and a log needs to be created
     
- 
+    await page.keyboard.press('Escape')
     // I made the code wait to load instead of constantly refreshing should save me some money!
     try {
         // await page.reload()
@@ -248,7 +258,7 @@ const getListVideoByUsername = async (username,snipe) => {
     }
     
 
-
+    // I need to add a catches on the page.keyboard.press
     await page.keyboard.press('Escape')
     var listVideo = []
     console.log(chalk.green("[*] Getting list video from: " + username))
@@ -273,7 +283,9 @@ return videoUrls2;
             loop=false
         }
         console.log(chalk.green(`[*] ${listVideo.length} video found`))
-        previousHeight = await page.evaluate("document.body.scrollHeight");
+        previousHeight = await page.evaluate("document.body.scrollHeight").catch(() => {
+            
+        });
         await page.evaluate("window.scrollTo(0, document.body.scrollHeight)").catch(() => {
             // Just catching the error
         })
