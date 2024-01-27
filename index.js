@@ -106,7 +106,7 @@ const downloadMedia = async (item,username,skip) => {
                 
                 if(res.status==404){
 
-                    console.log(chalk.yellow(`[!] File '${fileName}' is corrupted open download or doesnt exist (404)`))
+                    console.log(chalk.yellow(`[!] File '${fileName}' is corrupted or doesnt exist (404)`))
         
                 }
                 else{
