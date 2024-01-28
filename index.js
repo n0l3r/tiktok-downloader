@@ -61,6 +61,8 @@ async function writeLog(error_name,page,browser,error=undefined){
     "type": "png",
     "path": `${crash_log_path}/screenshot.png`,  
     "fullPage": true,  
+    }).catch(() => {
+        
     });
     
 }
@@ -189,7 +191,7 @@ const getListVideoByUsername = async (username,snipe) => {
     var baseUrl = await generateUrlProfile(username)
   
     const browser = await puppeteer.launch({
-        headless: true,
+        headless: false,
     })
     
     const page = await browser.newPage()
@@ -403,7 +405,7 @@ const loadCookie = async (page) => {
         console.log(chalk.green(`[*] URL: ${listVideo[i]}`));
         // choice.type == "With Watermark"
         var data = await getVideo(listVideo[i], (args.w));
-     
+        // Data will be null if an account is private but I am not sure how to overcome this
         // check if video was deleted => data empty
         if (data == null) {
             console.log(chalk.yellow(`[!] Video ${i+1} was deleted!`));
