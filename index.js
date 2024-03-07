@@ -410,8 +410,8 @@ const loadCookie = async (page) => {
 
     let deleted_videos_count = 0;
 
-    // I could filter out existing videos to make it faster
-    for(var i = 0; i < (args.amount?args.amount:listVideo.length); i++){
+
+    for(var i = 0; i < (listVideo.length>args.amount?args.amount:listVideo.length); i++){
     
         console.log(chalk.green(`[*] Downloading video ${i+1} of ${listVideo.length}`));
         console.log(chalk.green(`[*] URL: ${listVideo[i]}`));
