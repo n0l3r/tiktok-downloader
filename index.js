@@ -438,5 +438,5 @@ const loadCookie = async (page) => {
     }
     console.log(chalk.yellow(`[!] ${deleted_videos_count} of ${listVideo.length} videos were deleted!`));
     
-    // await login("james","123123123",undefined)
+
 })();

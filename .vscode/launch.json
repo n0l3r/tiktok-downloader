@@ -36,6 +36,18 @@
             "args": ["-u","https://www.tiktok.com/@daniellarsonwork2024/video/7328562827533356331"]
             
 
+        },
+        {
+            "type": "node",
+            "request": "launch",
+            "name": "Mass Download",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "program": "${workspaceFolder}/index.js",
+            "args": ["-m","daniellarsonfree2024"]
+            
+
         }
     ]
 }
