@@ -223,7 +223,7 @@ const getListVideoByUsername = async (username,snipe) => {
          exit();
     });
     await page.keyboard.press('Escape')
-    const delay_milliseconds=3000
+    const delay_milliseconds=3000+500
     const delay_after_load=1000
     const num_refreshes=10
     
@@ -253,7 +253,7 @@ const getListVideoByUsername = async (username,snipe) => {
     catch (error) {
             //the writelog code was here until I broke it down into a function
             await writeLog("element_error",page,browser,error)
-            await browser.close()
+            //await browser.close()
         
     }
     
@@ -410,7 +410,7 @@ const loadCookie = async (page) => {
 
     let deleted_videos_count = 0;
 
-
+    // I could filter out existing videos to make it faster
     for(var i = 0; i < (args.amount?args.amount:listVideo.length); i++){
     
         console.log(chalk.green(`[*] Downloading video ${i+1} of ${listVideo.length}`));
@@ -428,7 +428,7 @@ const loadCookie = async (page) => {
         const username=listVideo[i].match(/@([^\/]+)/)
         
        
-
+        
         await downloadMedia(data,username,args.k).then(() => {
             console.log(chalk.green("[+] Downloaded successfully"));
         })
