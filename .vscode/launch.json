@@ -11,9 +11,31 @@
             "skipFiles": [
                 "<node_internals>/**"
             ],
-            "program": "${workspaceFolder}\\index.js"
+            "program": "${workspaceFolder}/index.js"
         },
-        //node .\index.js -m daniellarsonwork2024
-        
+        {
+            "type": "node",
+            "request": "launch",
+            "name": "Perma-Broken-Slideshow",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "program": "${workspaceFolder}/index.js",
+            "args": ["-u","https://www.tiktok.com/@daniellarsonwork2024/video/7328562709987872046"]
+            
+
+        },
+        {
+            "type": "node",
+            "request": "launch",
+            "name": "Working-Slideshow",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "program": "${workspaceFolder}/index.js",
+            "args": ["-u","https://www.tiktok.com/@daniellarsonwork2024/video/7328562827533356331"]
+            
+
+        }
     ]
 }
