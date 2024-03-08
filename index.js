@@ -15,7 +15,7 @@ const {Headers} = require('node-fetch');
 const {ArgumentParser} = require('argparse');
 const readline = require('readline');
 const moment = require('moment')
-
+const extrafs = require('fs-extra')
 // const { EOF } = require("dns");
 
 
@@ -27,6 +27,7 @@ const parser = new ArgumentParser({
 
 parser.add_argument('-w', {action:'store_true',help:'Downloads Videos With Watermark'});
 parser.add_argument('-s', {action:'store_true',help:'Only does a single iteration of link-gathering'});
+parser.add_argument('--full', {action:'store_true',help:'downloads everything and avoids skipping previously downloaded videos'});
 parser.add_argument('--amount', {help:'Specify number of videos to download',type:'int'});
 
 // -t txtfile -u url -m username  -w watermark included
@@ -342,6 +343,43 @@ const loadCookie = async (page) => {
 
 
 
+const filterListVideos= async (listVideos) => {
+    
+    var usernames = new Set()
+    var downloadedFiles={}
+
+    listVideos.forEach(element => {
+        const username=listVideos[0].match(/@([^\/]+)/)[0]
+        usernames.add(username)    
+    });
+
+    for (const username of usernames.keys()){
+        // There is a potential that the users videos have never been downloaded before and accessing the directory will throw exception
+        try{
+            const folder =path.join(__dirname,`downloads/${username}/`);
+            var fileNames = await extrafs.readdir(folder)
+            fileNames=fileNames.map(fileName => fileName.split('.')[0].split('_')[0]);
+            downloadedFiles[username]=fileNames
+        }
+        catch(error){
+            continue
+        }
+    }
+    // If all users in the list videos have never been seen before
+    if(Object.keys(downloadedFiles).length===0){
+        return listVideos
+    }
+
+    listVideos =listVideos.map(video=>{
+        const videoId=getIdVideo(video)
+        if(!downloadedFiles[listVideos[0].match(/@([^\/]+)/)[0]].find(video=>video===videoId)){
+            return video
+        }
+    }).filter(video=>video!=undefined)
+    return listVideos
+}
+
+
 
 (async () => {    
     // let results=await writeVideoAndReadVideosFromDB('daniellarsonwork24','https://www.tiktok.com/@daniellarsonwork24/video/99921218319966153571536174')
@@ -409,9 +447,10 @@ const loadCookie = async (page) => {
     console.log(chalk.green(`[!] Found ${listVideo.length} video`));
 
     let deleted_videos_count = 0;
-
-
-    for(var i = 0; i < (listVideo.length>args.amount?args.amount:listVideo.length); i++){
+    if(!args.full){
+        listVideo=await filterListVideos(listVideo)
+    }
+    for(var i = 0; i < (!args.amount || listVideo.length<args.amount?listVideo.length:args.amount); i++){
     
         console.log(chalk.green(`[*] Downloading video ${i+1} of ${listVideo.length}`));
         console.log(chalk.green(`[*] URL: ${listVideo[i]}`));
@@ -419,7 +458,7 @@ const loadCookie = async (page) => {
         var data = await getVideo(listVideo[i], (args.w));
         // Data will be null if an account is private but I am not sure how to overcome this
         // check if video was deleted => data empty
-        if (data == null) {
+    if (data == null) {
             console.log(chalk.yellow(`[!] Video ${i+1} was deleted!`));
             deleted_videos_count++;
             continue;

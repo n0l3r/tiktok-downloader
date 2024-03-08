@@ -11,7 +11,7 @@
             "skipFiles": [
                 "<node_internals>/**"
             ],
-            "program": "${workspaceFolder}/index.js"
+            "program": "${workspaceFolder}/testing.js"
         },
         {
             "type": "node",
@@ -45,7 +45,7 @@
                 "<node_internals>/**"
             ],
             "program": "${workspaceFolder}/index.js",
-            "args": ["-m","daniellarsonfree2024"]
+            "args": ["-m","divinationsdark"]
             
 
         }
