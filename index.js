@@ -150,7 +150,7 @@ const downloadMedia = async (item,username,skip) => {
 // url contains the url, watermark is a bool that tells us what link to use
 const getVideo = async (url, watermark) => {
     const idVideo = await getIdVideo(url)
-    const API_URL = `https://api16-normal-c-useast1a.tiktokv.com/aweme/v1/feed/?aweme_id=${idVideo}`;
+    const API_URL = `https://api16-normal-c-useast2a.tiktokv.com/aweme/v1/feed/?aweme_id=${idVideo}`;
     const request = await fetch(API_URL, {
         method: "GET",
         headers : headers
