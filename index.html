@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>TikTok Downloader</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script>
+  <script>
+    async function handleForm(event) {
+      event.preventDefault();
+      const url = document.querySelector('textarea[name="url"]').value;
+      const withWatermark = document.querySelector('input[name="watermark"]').checked;
+
+      const urls = url.split('\n').map(u => u.trim()).filter(u => u !== "");
+
+      if (urls.length === 1) {
+        try {
+          const response = await fetch(`/download?url=${encodeURIComponent(urls[0])}&watermark=${withWatermark}`);
+          if (response.ok) {
+            const blob = await response.blob();
+            const downloadUrl = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = downloadUrl;
+            a.download = 'video.mp4';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(downloadUrl);
+          } else {
+            console.error('Error downloading the video');
+          }
+        } catch (error) {
+          console.error('Download failed', error);
+        }
+      } else {
+        var zip = new JSZip();
+        for (let singleUrl of urls) {
+          try {
+            const response = await fetch(`/download?url=${encodeURIComponent(singleUrl)}&watermark=${withWatermark}`);
+            if (response.ok) {
+              const blob = await response.blob();
+              zip.file(`video-${urls.indexOf(singleUrl) + 1}.mp4`, blob, {binary: true});
+            } else {
+              console.error('Error downloading the video');
+            }
+          } catch (error) {
+            console.error('Download failed', error);
+          }
+        }
+
+        zip.generateAsync({type:"blob"}).then(function(content) {
+          const a = document.createElement('a');
+          a.href = window.URL.createObjectURL(content);
+          a.download = 'videos.zip';
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+        });
+      }
+    }
+  </script>
+</head>
+<body>
+  <div class="container mt-5">
+    <h1 class="mb-3">TikTok Downloader</h1>
+    <form onsubmit="handleForm(event)">
+      <div class="mb-3">
+        <label for="url" class="form-label">URLs (one per line):</label>
+        <textarea class="form-control" id="url" name="url" rows="6"></textarea>
+      </div>
+      <div class="mb-3 form-check">
+        <input type="checkbox" class="form-check-input" id="watermark" name="watermark" value="true">
+        <label class="form-check-label" for="watermark">With Watermark</label>
+      </div>
+      <button type="submit" class="btn btn-primary">Download</button>
+    </form>
+  </div>
+</body>
+</html>
