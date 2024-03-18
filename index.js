@@ -222,12 +222,14 @@ const getIdVideo = async (url) => {
         })
     }
     const matching = url.includes("/video/")
-    if(!matching){
+    const matchingPhoto = url.includes("/photo/")
+    let idVideo = url.substring(url.indexOf("/video/") + 7, url.indexOf("/video/") + 26);
+    if(matchingPhoto) idVideo = url.substring(url.indexOf("/photo/") + 7, url.indexOf("/photo/") + 26);
+    else if(!matching){
         console.log(chalk.red("[X] Error: URL not found"));
         exit();
     }
     // Tiktok ID is usually 19 characters long and sits after /video/
-    let idVideo = url.substring(url.indexOf("/video/") + 7, url.indexOf("/video/") + 26);
     return (idVideo.length > 19) ? idVideo.substring(0, idVideo.indexOf("?")) : idVideo;
 }
 
