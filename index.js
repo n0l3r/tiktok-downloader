@@ -48,9 +48,14 @@ const getInput = (message) => new Promise((resolve, reject) => {
             message: message
         }
     ])
-    .then(res => resolve(res))
+    .then(res => {
+        // Split input by comma and trim each URL
+        const urls = res.input.split(",").map(url => url.trim());
+        resolve(urls);
+    })
     .catch(err => reject(err));
 });
+
 
 const generateUrlProfile = (username) => {
     var baseUrl = "https://www.tiktok.com/";
@@ -116,7 +121,7 @@ const downloadMedia = async (item) => {
 // url contains the url, watermark is a bool that tells us what link to use
 const getVideo = async (url, watermark) => {
     const idVideo = await getIdVideo(url)
-    const API_URL = `https://api16-normal-c-useast1a.tiktokv.com/aweme/v1/feed/?aweme_id=${idVideo}`;
+    const API_URL = `https://api16-normal-c-useast2a.tiktokv.com/aweme/v1/feed/?aweme_id=${idVideo}`;
     const request = await fetch(API_URL, {
         method: "GET",
         headers : headers
@@ -306,10 +311,13 @@ const getIdVideo = async (url) => {
             listVideo.push(url);
         }
     } else {
-        const urlInput = await getInput("Enter the URL : ");
-        const url = await getRedirectUrl(urlInput.input);
-        listVideo.push(url);
+        const urlInput = await getInput("Enter the URLs separated by commas: ");
+        for (const url of urlInput) {
+            const resolvedUrl = await getRedirectUrl(url);
+            listVideo.push(resolvedUrl);
+        }
     }
+    
 
     console.log(chalk.green(`[!] Found ${listVideo.length} video`));
 
