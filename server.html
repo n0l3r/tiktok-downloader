@@ -26,10 +26,12 @@
           </div>
           <div class="d-grid gap-2">
             <button type="submit" class="btn btn-primary" id="downloadButton">Download</button>
-            <div class="spinner-border text-primary d-none" id="loadingSpinner" role="status">
-              <span class="visually-hidden">Loading...</span>
+            <div class="d-flex justify-content-center">
+              <div class="spinner-border text-primary d-none" id="loadingSpinner" role="status">
+                <span class="visually-hidden">Loading...</span>
+              </div>
             </div>
-          </div>
+          </div>          
         </form>
       </div>
     </div>
@@ -38,60 +40,55 @@
   <script>
     async function handleForm(event) {
       event.preventDefault();
-      const url = document.querySelector('textarea[name="url"]').value;
+      const urlElement = document.querySelector('textarea[name="url"]');
+      const url = urlElement.value;
       const withWatermark = document.querySelector('input[name="watermark"]').checked;
+      const clearAfterDownload = document.querySelector('#clearAfterDownload').checked;
+      const downloadButton = document.querySelector('#downloadButton');
+      const loadingSpinner = document.querySelector('#loadingSpinner');
       const urls = url.split('\n').map(u => u.trim()).filter(u => u !== "");
-    
-      // Disable the form elements during the download process
-      document.getElementById('url').disabled = true;
-      document.getElementById('downloadButton').disabled = true;
-      document.getElementById('watermark').disabled = true;
-    
-      if (urls.length === 1) {
-        try {
+
+      // Toggle visibility
+      downloadButton.classList.add('d-none');
+      loadingSpinner.classList.remove('d-none');
+
+      try {
+        if (urls.length === 1) {
           const response = await fetch(`/download?url=${encodeURIComponent(urls[0])}&watermark=${withWatermark}`);
           if (response.ok) {
             const blob = await response.blob();
-            // Use the video ID or a timestamp to make the filename unique
-            const filename = `video-${new Date().getTime()}.mp4`;
-            triggerDownload(blob, filename);
+            triggerDownload(blob, `video-${new Date().getTime()}.mp4`);
           } else {
             console.error('Error downloading the video');
           }
-        } catch (error) {
-          console.error('Download failed', error);
-        }
-      } else {
-        var zip = new JSZip();
-        for (let i = 0; i < urls.length; i++) {
-          try {
+        } else {
+          var zip = new JSZip();
+          for (let i = 0; i < urls.length; i++) {
             const response = await fetch(`/download?url=${encodeURIComponent(urls[i])}&watermark=${withWatermark}`);
             if (response.ok) {
               const blob = await response.blob();
-              // Use index or video ID to make filenames unique inside the zip
-              const filename = `video-${i + 1}-${new Date().getTime()}.mp4`;
-              zip.file(filename, blob, {binary: true});
+              zip.file(`video-${i + 1}-${new Date().getTime()}.mp4`, blob, {binary: true});
             } else {
               console.error('Error downloading video', urls[i]);
             }
-          } catch (error) {
-            console.error('Download failed for video', urls[i], error);
           }
+          const content = await zip.generateAsync({type:"blob"});
+          triggerDownload(content, `videos-${new Date().getTime()}.zip`);
         }
-    
-        // Generate and download the zip file
-        zip.generateAsync({type:"blob"}).then(function(content) {
-          const filename = `videos-${new Date().getTime()}.zip`;
-          triggerDownload(content, filename);
-        });
+      } catch (error) {
+        console.error('Download failed', error);
       }
-    
-      // Re-enable the form elements after the process
-      document.getElementById('url').disabled = false;
-      document.getElementById('downloadButton').disabled = false;
-      document.getElementById('watermark').disabled = false;
+
+      // Re-enable button and hide spinner
+      downloadButton.classList.remove('d-none');
+      loadingSpinner.classList.add('d-none');
+
+      // Clear the textarea if the user opted to
+      if (clearAfterDownload) {
+        urlElement.value = '';
+      }
     }
-    
+
     function triggerDownload(blob, filename) {
       const downloadUrl = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -101,7 +98,7 @@
       a.click();
       document.body.removeChild(a);
       window.URL.revokeObjectURL(downloadUrl);
-    }    
+    }
     
     // New line on paste
     function handlePaste(event) {
