@@ -17,4 +17,4 @@ EXPOSE 80
 ENV NAME World
 
 # Run index.js when the container launches
-CMD ["node", "index.js"]
+CMD ["node", "server.js"]

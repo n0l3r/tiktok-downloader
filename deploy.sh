@@ -1,8 +1,10 @@
 #!/bin/bash
 
-# Set the project ID and service name
-PROJECT_ID="projecttiktok"
-SERVICE_NAME="tiktok-downloader"
+# Load the environment variables
+if [ -f .env ]; then
+    export $(cat .env | xargs)
+fi
+
 IMAGE_NAME="gcr.io/$PROJECT_ID/$SERVICE_NAME"
 
 # Build the Docker image
