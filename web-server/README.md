@@ -1,7 +1,3 @@
-<h1 style="align: center;">Tiktok Downloader</h1>
-
-<h2>Installation</h2>
-
 # TikTok Downloader Deployment Guide
 
 This guide will walk you through deploying the TikTok Downloader project using Docker and Google Cloud. Please follow the steps carefully to ensure a successful deployment.
@@ -20,7 +16,7 @@ If you don't already have a Google Cloud project, create one from the [Google Cl
 You will need to enable Google's artifact registry for this to work. [Artifact Registry](https://cloud.google.com/artifact-registry).
 
 ### 3. Clone the TikTok Downloader Repository
-Clone the TikTok Downloader repository to your local machine using the following command:
+Clone the TikTok Downloader repository to your google cloud shell (or local gcloud cli) using the following command:
 ```bash
 git clone https://github.com/n0l3r/tiktok-downloader.git
 cd tiktok-downloader
