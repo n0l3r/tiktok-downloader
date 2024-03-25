@@ -47,11 +47,11 @@
       const downloadButton = document.querySelector('#downloadButton');
       const loadingSpinner = document.querySelector('#loadingSpinner');
       const urls = url.split('\n').map(u => u.trim()).filter(u => u !== "");
-
+  
       // Toggle visibility
       downloadButton.classList.add('d-none');
       loadingSpinner.classList.remove('d-none');
-
+  
       try {
         if (urls.length === 1) {
           const response = await fetch(`/download?url=${encodeURIComponent(urls[0])}&watermark=${withWatermark}`);
@@ -67,7 +67,8 @@
             const response = await fetch(`/download?url=${encodeURIComponent(urls[i])}&watermark=${withWatermark}`);
             if (response.ok) {
               const blob = await response.blob();
-              zip.file(`video-${i + 1}-${new Date().getTime()}.mp4`, blob, {binary: true});
+              const fileDate = new Date(); // Use the current date
+              zip.file(`video-${i + 1}.mp4`, blob, {binary: true, date: fileDate});
             } else {
               console.error('Error downloading video', urls[i]);
             }
@@ -78,17 +79,17 @@
       } catch (error) {
         console.error('Download failed', error);
       }
-
+  
       // Re-enable button and hide spinner
       downloadButton.classList.remove('d-none');
       loadingSpinner.classList.add('d-none');
-
+  
       // Clear the textarea if the user opted to
       if (clearAfterDownload) {
         urlElement.value = '';
       }
     }
-
+  
     function triggerDownload(blob, filename) {
       const downloadUrl = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -99,25 +100,21 @@
       document.body.removeChild(a);
       window.URL.revokeObjectURL(downloadUrl);
     }
-    
+  
     // New line on paste
     function handlePaste(event) {
-      // Use setTimeout to allow the paste operation to complete before manipulating the value.
       setTimeout(() => {
         const textarea = event.target;
-        const cursorPosition = textarea.selectionStart; // Get the cursor position after pasting
+        const cursorPosition = textarea.selectionStart;
         const textBeforeCursor = textarea.value.substring(0, cursorPosition);
         const textAfterCursor = textarea.value.substring(cursorPosition);
-        
-        // Check if the pasted text ends with a newline; if not, add one.
+  
         if (!textBeforeCursor.endsWith('\n')) {
           textarea.value = textBeforeCursor + '\n' + textAfterCursor;
-          
-          // Move the cursor to the next line.
           textarea.selectionStart = textarea.selectionEnd = textBeforeCursor.length + 1;
         }
       }, 0);
-    }    
+    }
   </script>
 </body>
 </html>

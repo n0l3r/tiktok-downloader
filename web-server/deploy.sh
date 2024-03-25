@@ -39,14 +39,17 @@ else
     select_service
 fi
 
-# Image name must be lowercase
+## Image name must be lowercase
 IMAGE_NAME="gcr.io/$PROJECT_ID/$SERVICE_NAME"
 
 gcloud auth configure-docker
 
+# Ensure we are in the tiktok-downloader directory
+cd ..
+
 # Build the Docker image
-echo "Building Docker image..."
-docker build -t $IMAGE_NAME .
+echo "Building Docker image from the tiktok-downloader directory..."
+docker build -f web-server/Dockerfile -t $IMAGE_NAME .
 
 # Check if Docker build was successful
 if [ $? -ne 0 ]; then
