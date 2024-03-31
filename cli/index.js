@@ -150,6 +150,7 @@ const getVideo = async (url, watermark) => {
         console.error("Response body:", body);
     }
 
+    
     // check if video was deleted
     if (res.aweme_list[0].aweme_id != idVideo) {
         return null;
@@ -352,7 +353,7 @@ const getIdVideo = async (url) => {
             listVideo.push(url);
         }
     } else {
-        const urlInput = await getInput("Enter the URLs separated by commas: ");
+        const urlInput = await getInput("Enter the URL: ");
         for (const url of urlInput) {
             const resolvedUrl = await getRedirectUrl(url);
             listVideo.push(resolvedUrl);
