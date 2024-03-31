@@ -13,16 +13,15 @@ const { resolve } = require("path");
 const { reject } = require("lodash");
 const { Headers } = require("node-fetch");
 const readline = require("readline");
+const randomUseragent = require("random-useragent");
 
 //load inq module
 inquirer.registerPrompt("fuzzypath", require("inquirer-fuzzy-path"));
 
 //adding useragent to avoid ip bans
 const headers = new Headers();
-headers.append(
-    "User-Agent",
-    "TikTok 26.2.0 rv:262018 (iPhone; iOS 14.4.2; en_US) Cronet"
-);
+// random user agent
+headers.set("User-Agent", randomUseragent.getRandom());
 
 const getChoice = () =>
     new Promise((resolve, reject) => {
@@ -137,7 +136,7 @@ const downloadMedia = async (item) => {
 // url contains the url, watermark is a bool that tells us what link to use
 const getVideo = async (url, watermark) => {
     const idVideo = await getIdVideo(url);
-    const API_URL = `https://api16-normal-c-useast2a.tiktokv.com/aweme/v1/feed/?aweme_id=${idVideo}`;
+    const API_URL = `https://api22-normal-c-alisg.tiktokv.com/aweme/v1/feed/?aweme_id=${idVideo}&iid=7318518857994389254&device_id=7318517321748022790&channel=googleplay&app_name=musical_ly&version_code=300904&device_platform=android&device_type=ASUS_Z01QD&version=9`;
     const request = await fetch(API_URL, {
         method: "GET",
         headers: headers,
@@ -145,6 +144,7 @@ const getVideo = async (url, watermark) => {
     const body = await request.text();
     try {
         var res = JSON.parse(body);
+        
     } catch (err) {
         console.error("Error:", err);
         console.error("Response body:", body);
