@@ -238,32 +238,10 @@ const getRedirectUrl = async (url) => {
 };
 
 const getIdVideo = async (url) => {
-    if (url.includes("/t/")) {
-        url = await new Promise((resolve) => {
-            require("follow-redirects").https.get(url, function (res) {
-                return resolve(res.responseUrl);
-            });
-        });
-    }
-    const matching = url.includes("/video/");
-    const matchingPhoto = url.includes("/photo/");
-    let idVideo = url.substring(
-        url.indexOf("/video/") + 7,
-        url.indexOf("/video/") + 26
-    );
-    if (matchingPhoto)
-        idVideo = url.substring(
-            url.indexOf("/photo/") + 7,
-            url.indexOf("/photo/") + 26
-        );
-    else if (!matching) {
-        console.log(chalk.red("[X] Error: URL not found"));
-        exit();
-    }
-    // Tiktok ID is usually 19 characters long and sits after /video/
-    return idVideo.length > 19
-        ? idVideo.substring(0, idVideo.indexOf("?"))
-        : idVideo;
+    const response = await fetch(`https://www.tiktok.com/oembed?url=${url}`);
+    const data = await response.json();
+  
+    return data.embed_product_id
 };
 
 (async () => {
