@@ -2,6 +2,8 @@ node_modules/
 downloads/*
 .env
 /test-results/
+/tests/
+/tests-examples/
 /playwright-report/
 /blob-report/
 /playwright/.cache/
