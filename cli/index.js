@@ -7,21 +7,22 @@ const fetch = require("node-fetch");
 const chalk = require("chalk");
 const inquirer = require("inquirer");
 const fs = require("fs");
-const puppeteer = require("puppeteer");
+const assert = require('node:assert')
+//const playwright = require('playwright')
+const {chromium, devices} = require("playwright");
 const { exit } = require("process");
 const { resolve } = require("path");
 const { reject } = require("lodash");
 const { Headers } = require("node-fetch");
 const readline = require("readline");
-const randomUseragent = require("random-useragent");
+
 
 //load inq module
 inquirer.registerPrompt("fuzzypath", require("inquirer-fuzzy-path"));
 
 //adding useragent to avoid ip bans
 const headers = new Headers();
-// random user agent
-headers.set("User-Agent", randomUseragent.getRandom());
+
 
 const getChoice = () =>
     new Promise((resolve, reject) => {
@@ -138,7 +139,7 @@ const getVideo = async (url, watermark) => {
     const idVideo = await getIdVideo(url);
     const API_URL = `https://api22-normal-c-alisg.tiktokv.com/aweme/v1/feed/?aweme_id=${idVideo}&iid=7318518857994389254&device_id=7318517321748022790&channel=googleplay&app_name=musical_ly&version_code=300904&device_platform=android&device_type=ASUS_Z01QD&version=9`;
     const request = await fetch(API_URL, {
-        method: "GET",
+        method: "OPTIONS",
         headers: headers,
     });
     const body = await request.text();
@@ -186,13 +187,13 @@ const getVideo = async (url, watermark) => {
 
 const getListVideoByUsername = async (username) => {
     var baseUrl = await generateUrlProfile(username);
-    const browser = await puppeteer.launch({
+    const browser = await chromium.launch({
         headless: false,
     });
     const page = await browser.newPage();
-    page.setUserAgent(
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/85.0.4182.0 Safari/537.36"
-    );
+    //page.userAgent(
+        //"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/85.0.4182.0 Safari/537.36"
+    //);
     await page.goto(baseUrl);
     var listVideo = [];
     console.log(chalk.green("[*] Getting list video from: " + username));
