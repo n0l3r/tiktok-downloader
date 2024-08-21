@@ -143,25 +143,31 @@ const getVideo = async (url, watermark) => {
         headers: headers,
     });
     const body = await request.text();
+    // Check for rate limit
+    if (body.includes("ratelimit triggered")) {
+        console.error("Error: Rate limit triggered. Please try again later.");
+        return null; // or handle this error as needed
+    }
+
+    let res;
     try {
-        var res = JSON.parse(body);
-        
+        res = JSON.parse(body);
     } catch (err) {
         console.error("Error:", err);
         console.error("Response body:", body);
+        return null; // Return early to prevent further errors
     }
 
-    
     // check if video was deleted
     if (res.aweme_list[0].aweme_id != idVideo) {
         return null;
     }
 
     let urlMedia = "";
-
     let image_urls = [];
     // check if video is slideshow
-    if (!!res.aweme_list[0].image_post_info) {
+    // removed the !! since it is redundant with the `if`
+    if (res.aweme_list[0].image_post_info) {
         console.log(chalk.green("[*] Video is slideshow"));
 
         // get all image urls
@@ -170,7 +176,7 @@ const getVideo = async (url, watermark) => {
             // url_list[1] contains a jpeg
             image_urls.push(element.display_image.url_list[1]);
         });
-        } else if (res.aweme_list[0].video) {
+    } else if (res.aweme_list[0].video) {
         urlMedia = null;
         const video = res.aweme_list[0].video;
         if (watermark){
