@@ -143,14 +143,28 @@ const getVideo = async (url, watermark) => {
         headers: headers,
     });
     const body = await request.text();
+
+    let res;
     try {
-        var res = JSON.parse(body);
-        
+        res = JSON.parse(body);
     } catch (err) {
-        console.error("Error:", err);
+        console.error("Error parsing JSON:", err);
         console.error("Response body:", body);
+
+        if (body.includes("ratelimit triggered")) {
+            console.error("Rate limit triggered. Please wait before retrying.");
+            return null;
+        }
+
+        // Handle other non-JSON responses here if needed
+        return null;
     }
 
+    // Safeguard against missing properties
+    if (!res.aweme_list || res.aweme_list.length === 0 || res.aweme_list[0].aweme_id !== idVideo) {
+        console.error("Error: Video not found or deleted.");
+        return null;
+    }
     
     // check if video was deleted
     if (res.aweme_list[0].aweme_id != idVideo) {
