@@ -48,7 +48,7 @@
     "log-symbols": "^4.1.0",
     "mimic-fn": "^2.1.0",
     "mute-stream": "^0.0.8",
-    "node-fetch": "^2.6.7",
+    "node-fetch": "^2.7.0",
     "nth-check": "^2.0.1",
     "onetime": "^5.1.2",
     "ora": "^5.4.1",
