@@ -23,6 +23,26 @@ inquirer.registerPrompt("fuzzypath", require("inquirer-fuzzy-path"));
 //adding useragent to avoid ip bans
 const headers = new Headers();
 
+// File to store URLs that triggered rate limits
+const RETRY_FILE = "retry.txt";
+
+// Function to read retry.txt and get the list of URLs
+const getRetryUrls = () => {
+    if (!fs.existsSync(RETRY_FILE)) return [];
+    return fs.readFileSync(RETRY_FILE, "utf-8").split("\n").filter(Boolean);
+};
+
+// Function to add a URL to retry.txt if a rate limit is triggered
+const logRetry = (url) => {
+    fs.appendFileSync(RETRY_FILE, `${url}\n`);
+};
+
+// Function to remove a URL from retry.txt after a successful download
+const removeFromRetry = (url) => {
+    let retries = getRetryUrls();
+    retries = retries.filter((retryUrl) => retryUrl !== url);
+    fs.writeFileSync(RETRY_FILE, retries.join("\n"));
+};
 
 const getChoice = () =>
     new Promise((resolve, reject) => {
@@ -152,7 +172,8 @@ const getVideo = async (url, watermark) => {
         console.error("Response body:", body);
 
         if (body.includes("ratelimit triggered")) {
-            console.error("Rate limit triggered. Please wait before retrying.");
+            console.error("Rate limit triggered. Logging URL to retry.txt");
+            logRetry(url); // Log the URL for retry
             return null;
         }
 
@@ -165,43 +186,29 @@ const getVideo = async (url, watermark) => {
         console.error("Error: Video not found or deleted.");
         return null;
     }
-    
-    // check if video was deleted
-    if (res.aweme_list[0].aweme_id != idVideo) {
-        return null;
-    }
 
     let urlMedia = "";
-
     let image_urls = [];
     // check if video is slideshow
     if (!!res.aweme_list[0].image_post_info) {
         console.log(chalk.green("[*] Video is slideshow"));
-
-        // get all image urls
+         // get all image urls
         res.aweme_list[0].image_post_info.images.forEach((element) => {
             // url_list[0] contains a webp
             // url_list[1] contains a jpeg
             image_urls.push(element.display_image.url_list[1]);
         });
-        } else if (res.aweme_list[0].video) {
-        urlMedia = null;
+    } else if (res.aweme_list[0].video) {
         const video = res.aweme_list[0].video;
-        if (watermark){
-            if(video.download_addr && video.download_addr.url_list && video.download_addr.url_list.length > 0){
-                urlMedia = video.download_addr.url_list[0];
-            }
-        }
-        if(urlMedia === null){
-            if(video.play_addr && video.play_addr.url_list && video.play_addr.url_list.length > 0){
-                urlMedia = video.play_addr.url_list[0];
-            }
-            else{
-                console.error('Error: video download_addr or play_addr or their url_list is missing.');
-            }
+        if (watermark && video.download_addr && video.download_addr.url_list.length > 0) {
+            urlMedia = video.download_addr.url_list[0];
+        } else if (video.play_addr && video.play_addr.url_list.length > 0) {
+            urlMedia = video.play_addr.url_list[0];
+        } else {
+            console.error("Error: video download_addr or play_addr or their url_list is missing.");
         }
     } else {
-        console.error('Error: video or image_post_info is missing in the aweme object.');
+        console.error("Error: video or image_post_info is missing in the aweme object.");
     }
 
     const data = {
@@ -301,34 +308,18 @@ const getIdVideo = async (url) => {
     const choice = await getChoice();
     var listVideo = [];
     if (choice.choice === "Mass Download (Username)") {
-        const usernameInput = await getInput(
-            "Enter the username with @ (e.g. @username) : "
-        );
-        const username = usernameInput;
-        listVideo = await getListVideoByUsername(username);
-        if (listVideo.length === 0) {
-            console.log(chalk.yellow("[!] Error: No video found"));
-            exit();
-        }
+        const usernameInput = await getInput("Enter the username with @ (e.g. @username) : ");
+        listVideo = await getListVideoByUsername(usernameInput);
     } else if (choice.choice === "Mass Download with (txt)") {
-        var urls = [];
         // Get URL from file
         const fileInput = await inquirer.prompt([
             {
                 type: "fuzzypath",
                 name: "input",
-                excludePath: (nodePath) => {
-                    return (
-                        nodePath.includes("node_modules") ||
-                        nodePath.includes(".git")
-                    );
-                },
+                excludePath: (nodePath) => nodePath.includes("node_modules") || nodePath.includes(".git"),
                 // excludePath :: (String) -> Bool
                 // excludePath to exclude some paths from the file-system scan
-                excludeFilter: (nodePath) => {
-                    if (nodePath.includes(".txt")) console.log(nodePath);
-                    return !nodePath.endsWith(".txt");
-                },
+                excludeFilter: (nodePath) => !nodePath.endsWith(".txt"),
                 // excludeFilter :: (String) -> Bool
                 // excludeFilter to exclude some paths from the final list, e.g. '.'
                 itemType: "file",
@@ -353,10 +344,10 @@ const getIdVideo = async (url) => {
 
         // await getInput("Enter the file path : ");
         const file = fileInput.input;
-
+        
         if (!fs.existsSync(file)) {
             console.log(chalk.red("[X] Error: File not found"));
-            exit();
+            return;
         }
 
         // read file line by line
@@ -366,62 +357,39 @@ const getIdVideo = async (url) => {
         });
 
         for await (const line of rl) {
-            if (urls.includes(line)) {
-                console.log(
-                    chalk.yellow(`[!] Skipping duplicate entry: ${line}`)
-                );
-                continue;
-            }
-            urls.push(line);
-            console.log(chalk.green(`[*] Found URL: ${line}`));
-        }
-
-        for (var i = 0; i < urls.length; i++) {
-            const url = await getRedirectUrl(urls[i]);
+            const url = await getRedirectUrl(line);
             listVideo.push(url);
         }
     } else {
         const urlInput = await getInput("Enter the URL: ");
         for (const url of urlInput) {
-            const resolvedUrl = await getRedirectUrl(url);
-            listVideo.push(resolvedUrl);
+            listVideo.push(await getRedirectUrl(url));
         }
     }
 
-    console.log(chalk.green(`[!] Found ${listVideo.length} video`));
+    console.log(chalk.green(`[!] Found ${listVideo.length} video(s)`));
 
-    let deleted_videos_count = 0;
-    for (var i = 0; i < listVideo.length; i++) {
-        console.log(
-            chalk.green(`[*] Downloading video ${i + 1} of ${listVideo.length}`)
-        );
-        console.log(chalk.green(`[*] URL: ${listVideo[i]}`));
-        var data = await getVideo(
-            listVideo[i],
-            choice.type == "With Watermark"
-        );
+    // Process videos, retrying those that hit the rate limit
+    const retryUrls = getRetryUrls();
+    listVideo.push(...retryUrls);
 
+    for (const videoUrl of listVideo) {
+        console.log(chalk.green(`[*] Downloading video from: ${videoUrl}`));
+        const data = await getVideo(videoUrl, choice.type === "With Watermark");
         // check if video was deleted => data empty
         if (data == null) {
-            console.log(chalk.yellow(`[!] Video ${i + 1} was deleted!`));
-            deleted_videos_count++;
-            continue;
+            continue; // Skip if the video couldn't be retrieved
         }
 
-        downloadMedia(data)
+        await downloadMedia(data)
             .then(() => {
                 console.log(chalk.green("[+] Downloaded successfully"));
+                removeFromRetry(videoUrl); // Remove from retry.txt if successful
             })
             .catch((err) => {
                 console.log(chalk.red("[X] Error: " + err));
             });
     }
 
-    if (deleted_videos_count > 0) {
-        console.log(
-            chalk.yellow(
-                `[!] ${deleted_videos_count} of ${listVideo.length} videos were deleted!`
-            )
-        );
-    }
+    console.log(chalk.green("All downloads complete."));
 })();
