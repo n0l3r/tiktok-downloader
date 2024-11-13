@@ -7,4 +7,6 @@ downloads/*
 /playwright-report/
 /blob-report/
 /playwright/.cache/
+/cli/downloads/*
+/cli/retry.txt
 
