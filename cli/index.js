@@ -193,44 +193,39 @@ const getVideo = async (url, watermark) => {
     return null;
   }
 
-    let urlMedia = "";
+  let urlMedia = "";
+  let image_urls = [];
+  // check if video is slideshow
+  if (!!res.aweme_list[0].image_post_info) {
+    console.log(chalk.green("[*] Video is slideshow"));
 
-    let image_urls = [];
-    // check if video is slideshow
-    if (!!res.aweme_list[0].image_post_info) {
-        console.log(chalk.green("[*] Video is slideshow"));
-
-        // get all image urls
-        res.aweme_list[0].image_post_info.images.forEach((element) => {
-            // url_list[0] contains a webp
-            // url_list[1] contains a jpeg
-            image_urls.push(element.display_image.url_list[1]);
-        });
-        } else if (res.aweme_list[0].video) {
-        urlMedia = null;
-        const video = res.aweme_list[0].video;
-        if (watermark){
-            if(video.download_addr && video.download_addr.url_list && video.download_addr.url_list.length > 0){
-                urlMedia = video.download_addr.url_list[0];
-            }
-        }
-        if(urlMedia === null){
-            if(video.play_addr && video.play_addr.url_list && video.play_addr.url_list.length > 0){
-                urlMedia = video.play_addr.url_list[0];
-            }
-            else{
-                console.error('Error: video download_addr or play_addr or their url_list is missing.');
-            }
-        }
-    } else {
-      console.error(
-        "Error: video download_addr or play_addr or their url_list is missing."
-      );
+    // get all image urls
+    res.aweme_list[0].image_post_info.images.forEach((element) => {
+      // url_list[0] contains a webp
+      // url_list[1] contains a jpeg
+      image_urls.push(element.display_image.url_list[1]);
+    });
+  } else if (res.aweme_list[0].video) {
+    urlMedia = null;
+    const video = res.aweme_list[0].video;
+    if (watermark){
+      if(video.download_addr && video.download_addr.url_list && video.download_addr.url_list.length > 0){
+        urlMedia = video.download_addr.url_list[0];
+      }
+    }
+    if(urlMedia === null){
+      if(video.play_addr && video.play_addr.url_list && video.play_addr.url_list.length > 0){
+        urlMedia = video.play_addr.url_list[0];
+      } else {
+        console.error(
+          "Error: video download_addr or play_addr or their url_list is missing."
+        );
+      }
     }
   } else {
     console.error(
       "Error: video or image_post_info is missing in the aweme object."
-    );
+      );
   }
 
   const data = {
